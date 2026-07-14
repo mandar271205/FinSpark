@@ -1,0 +1,247 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+/* Base Theme */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+    background-color: #0a0e17 !important;
+    color: #ffffff !important;
+}
+
+.stApp {
+    background-color: #0a0e17 !important;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+    font-weight: 700 !important;
+}
+
+h1 {
+    text-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+
+/* Glassmorphism Containers */
+.soc-container {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Top Header Bar */
+.soc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: linear-gradient(90deg, rgba(10, 14, 23, 0.9), rgba(0, 212, 255, 0.05));
+    border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.15);
+    margin-bottom: 30px;
+    border-radius: 0 0 12px 12px;
+}
+
+.soc-header-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+}
+
+.soc-header-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 600;
+    color: #a0aec0;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    background-color: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10B981, 0 0 20px #10B981;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Live Metrics Row */
+.metric-card {
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.8) 0%, rgba(36, 59, 85, 0.9) 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #00d4ff;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px -5px rgba(0, 212, 255, 0.3);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.metric-card:hover::before {
+    opacity: 1;
+}
+
+.metric-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+    margin: 5px 0;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: #a0aec0;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+
+/* Streamlit Button Overrides */
+/* Hide default st.button styling when we use our custom classes */
+.stButton > button {
+    width: 100%;
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.8), rgba(0, 150, 255, 0.8)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(0, 212, 255, 0.5) !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    padding: 12px 24px !important;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4) !important;
+    border-color: #00d4ff !important;
+}
+
+/* Simulate Attack Button */
+div[data-testid="stVerticalBlock"] > div > div > div > div > div > button:has(div:contains("Simulate Attack")) {
+    background: linear-gradient(90deg, #ef4444, #b91c1c) !important;
+    border: 1px solid #f87171 !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
+    animation: pulse-red 2s infinite !important;
+    font-size: 1.1rem !important;
+    padding: 15px 30px !important;
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Quantum Vault Button */
+div[data-testid="stVerticalBlock"] > div > div > div > div > div > button:has(div:contains("Quantum Vault")) {
+    background: linear-gradient(90deg, #8b5cf6, #6366f1) !important;
+    border: 1px solid #a78bfa !important;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Streamlit Native Tabs Styling */
+[data-baseweb="tab-list"] {
+    gap: 15px;
+    padding-bottom: 10px;
+}
+
+[data-baseweb="tab"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid transparent !important;
+    color: #a0aec0 !important;
+    border-radius: 8px !important;
+    padding: 12px 20px !important;
+    margin: 0 !important;
+    flex-grow: 1; /* make them take equal width if possible */
+    text-align: center;
+    font-weight: 600;
+}
+
+[data-baseweb="tab"]:hover {
+    background: rgba(0, 212, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(0, 212, 255, 0.3) !important;
+}
+
+[aria-selected="true"] {
+    background: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+    border: 1px solid #00d4ff !important;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3), inset 0 0 10px rgba(0, 212, 255, 0.1) !important;
+    border-bottom: 3px solid #00d4ff !important;
+}
+
+[data-baseweb="tab-border"] {
+    display: none !important;
+}
+
+[data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+
+/* Dataframes */
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-testid="stTable"] {
+    background-color: transparent !important;
+}
+
+th {
+    background-color: rgba(0, 212, 255, 0.1) !important;
+    color: #00d4ff !important;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.2) !important;
+}
+
+td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Sidebar - if accidentally shown */
+[data-testid="stSidebar"] {
+    background-color: rgba(10, 14, 23, 0.95) !important;
+    border-right: 1px solid rgba(0, 212, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
