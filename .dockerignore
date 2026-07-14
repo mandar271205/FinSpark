@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Frontend
+frontend/
+
+# Git
+.git
+.gitignore
+
+# Jupyter notebooks
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+
+# Do NOT exclude artifacts or .pkl files
+!artifacts/
+!*.pkl

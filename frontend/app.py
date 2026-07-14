@@ -416,7 +416,7 @@ with tab4:
                 st.session_state["val_result"] = result
                 st.success("Prediction Complete!")
             else:
-                st.error("No response from backend. Please check the server is running at http://localhost:8000")
+                st.error(f"No response from backend. Please check the server is running at {API_BASE_URL}")
 
         if "val_result" in st.session_state:
             result = st.session_state["val_result"]
