@@ -606,6 +606,74 @@ function QuantumVault({ vault, busy, testVault }) {
 }
 
 /* ═══════════════════════════════════════════════
+   HELPERS — Real-World Validation
+═══════════════════════════════════════════════ */
+function getAccentForScore(val) {
+  if (val == null) return 'cyan'
+  if (val >= 0.85) return 'green'
+  if (val >= 0.65) return 'amber'
+  return 'red'
+}
+
+/* CountUp — smooth number animation from 0 → target */
+function CountUp({ target, suffix = '', decimals }) {
+  const num = Number(target)
+  const dec = decimals !== undefined ? decimals : String(target).includes('.') ? (String(target).split('.')[1] || '').length : 0
+  const [display, setDisplay] = React.useState(0)
+  React.useEffect(() => {
+    if (isNaN(num)) return
+    let start = null
+    const duration = 900
+    function step(ts) {
+      if (!start) start = ts
+      const p = Math.min((ts - start) / duration, 1)
+      const ease = 1 - Math.pow(1 - p, 3)
+      setDisplay(parseFloat((ease * num).toFixed(dec)))
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [num])
+  return <>{isNaN(num) ? target : display}{suffix}</>
+}
+
+/* 2×2 Confusion Matrix heatmap */
+function ConfusionMatrix({ matrix }) {
+  let tp, fp, fn, tn
+  if (Array.isArray(matrix[0])) {
+    [[tp, fp], [fn, tn]] = matrix
+  } else {
+    [tp, fp, fn, tn] = matrix
+  }
+  const max = Math.max(tp, fp, fn, tn, 1)
+  const cell = (val, label, cls) => (
+    <div className={`cm-cell cm-cell--${cls}`}>
+      <span className="cm-val">{val}</span>
+      <span className="cm-label">{label}</span>
+      <div className="cm-bar" style={{ width: `${Math.round((val / max) * 100)}%` }} />
+    </div>
+  )
+  return (
+    <div className="cm-wrap">
+      <div className="cm-headers">
+        <span />
+        <span className="cm-header-label">Predicted +</span>
+        <span className="cm-header-label">Predicted −</span>
+      </div>
+      <div className="cm-row">
+        <span className="cm-row-label">Actual +</span>
+        {cell(tp, 'True Positive',  'tp')}
+        {cell(fn, 'False Negative', 'fn')}
+      </div>
+      <div className="cm-row">
+        <span className="cm-row-label">Actual −</span>
+        {cell(fp, 'False Positive', 'fp')}
+        {cell(tn, 'True Negative',  'tn')}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
    REAL-WORLD VALIDATION
 ═══════════════════════════════════════════════ */
 function RealWorldValidation({
@@ -625,6 +693,32 @@ function RealWorldValidation({
   const templateUrl = React.useMemo(() => URL.createObjectURL(new Blob([template], { type: 'text/csv' })), [])
   const rows = validation?.results || []
   const correct = rows.filter((row) => row.is_fraud_actual === row.is_fraud_predicted).length
+
+  // ── Debug log full API response ──
+  React.useEffect(() => {
+    if (!validation) return
+    console.log('🔍 Real-World Validation Response:', validation)
+    console.log('📦 Available keys:', Object.keys(validation))
+    if (validation.precision !== undefined) console.log('✅ Advanced metrics present')
+    if (validation.confusion_matrix)        console.log('🔲 Confusion matrix:', validation.confusion_matrix)
+  }, [validation])
+
+  // ── Core 4 metric cards ──
+  const coreCards = [
+    { label: 'Total Processed',     value: validation?.total_processed, icon: Globe2,       accent: 'cyan',   suffix: ''  },
+    { label: 'Fraud Detected',      value: validation?.fraud_detected,  icon: ShieldAlert,  accent: 'red',    suffix: ''  },
+    { label: 'Model Accuracy',      value: validation?.accuracy != null ? parseFloat((validation.accuracy * 100).toFixed(1)) : null, icon: BadgeCheck, accent: 'green', suffix: '%' },
+    { label: 'Correct Predictions', value: correct,                     icon: CheckCircle2, accent: 'violet', suffix: ''  },
+  ]
+
+  // ── Advanced metrics (conditional) ──
+  const hasAdvanced = !!(validation?.precision !== undefined || validation?.recall !== undefined || validation?.f1_score !== undefined)
+  const hasConfusion = !!(validation?.confusion_matrix && Array.isArray(validation.confusion_matrix))
+  const advancedCards = hasAdvanced ? [
+    { label: 'Precision', value: validation.precision != null ? parseFloat((validation.precision * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.precision), icon: Eye },
+    { label: 'Recall',    value: validation.recall    != null ? parseFloat((validation.recall    * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.recall),    icon: Activity },
+    { label: 'F1-Score',  value: validation.f1_score  != null ? parseFloat((validation.f1_score  * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.f1_score),  icon: Gauge },
+  ] : []
 
   return (
     <>
@@ -665,29 +759,105 @@ function RealWorldValidation({
         </motion.button>
       </motion.section>
 
+      {/* ── Loading skeleton ── */}
+      <AnimatePresence>
+        {busy && (
+          <motion.section
+            className="panel"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="skeleton-grid">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-card">
+                  <div className="skeleton-icon" />
+                  <div className="skeleton-value" />
+                  <div className="skeleton-label" />
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* ── CSV preview ── */}
       {preview.length > 0 && (
-        <DataTable title={`Preview - ${preview.length} rows`} rows={preview} columns={Object.keys(preview[0])} />
+        <DataTable title={`Preview — ${preview.length} rows`} rows={preview} columns={Object.keys(preview[0])} />
       )}
 
+      {/* ── Results ── */}
       {validation?.status === 'success' && (
         <>
+          {/* Core 4 cards */}
+          <motion.div className="val-section-label" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+            <Shield size={14} /> Core Metrics
+          </motion.div>
           <section className="metric-grid">
-            {[
-              ['Total Processed',    validation.total_processed],
-              ['Fraud Detected',     validation.fraud_detected],
-              ['Model Accuracy',     validation.accuracy !== null ? `${(validation.accuracy * 100).toFixed(1)}%` : 'N/A'],
-              ['Correct Predictions', correct],
-            ].map(([label, value], i) => (
+            {coreCards.map(({ label, value, icon: Icon, accent, suffix }, i) => (
               <motion.div
+                className={`metric-card val-card val-card--${accent}`}
                 key={label}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07, duration: 0.4 }}
+                transition={{ delay: i * 0.09, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                whileHover={{ y: -5, transition: { duration: 0.18 } }}
               >
-                <SmallMetric label={label} value={value} />
+                <div className={`metric-icon val-icon--${accent}`}><Icon size={22} /></div>
+                <div className="metric-value">
+                  {value != null ? <CountUp target={Number(value)} suffix={suffix} /> : 'N/A'}
+                </div>
+                <div className="metric-label">{label}</div>
               </motion.div>
             ))}
           </section>
+
+          {/* Advanced metrics (conditional) */}
+          {hasAdvanced ? (
+            <>
+              <motion.div className="val-section-label" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
+                <Brain size={14} /> Advanced Metrics
+              </motion.div>
+              <section className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                {advancedCards.map(({ label, value, suffix, accent, icon: Icon }, i) => (
+                  <motion.div
+                    className={`metric-card val-card val-card--${accent}`}
+                    key={label}
+                    initial={{ opacity: 0, y: 22 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 + i * 0.09, duration: 0.5 }}
+                    whileHover={{ y: -5, transition: { duration: 0.18 } }}
+                  >
+                    <div className={`metric-icon val-icon--${accent}`}><Icon size={22} /></div>
+                    <div className="metric-value">
+                      {value != null ? <CountUp target={Number(value)} suffix={suffix} /> : 'N/A'}
+                    </div>
+                    <div className="metric-label">{label}</div>
+                  </motion.div>
+                ))}
+              </section>
+            </>
+          ) : (
+            <motion.div className="val-no-advanced" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              <HelpCircle size={14} />
+              Advanced metrics (Precision / Recall / F1) not in this API response — see console for full structure.
+            </motion.div>
+          )}
+
+          {/* Confusion matrix (conditional) */}
+          {hasConfusion && (
+            <motion.section
+              className="panel"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65, duration: 0.4 }}
+            >
+              <PanelHeader icon={Eye} title="Confusion Matrix" />
+              <ConfusionMatrix matrix={validation.confusion_matrix} />
+            </motion.section>
+          )}
+
+          {/* Per-row results table */}
           <DataTable
             title="Per-Row Results"
             rows={rows.slice(0, 24)}
