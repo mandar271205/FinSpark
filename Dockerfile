@@ -19,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Note: Ensure .dockerignore does not exclude the .pkl files in artifacts/
 COPY . .
 
-# Expose port 8000
+# Expose Render's default fallback port
 EXPOSE 8000
 
-# Start command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start command. Render injects PORT; default to 8000 for local Docker runs.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
