@@ -712,7 +712,7 @@ function RealWorldValidation({
   ]
 
   // ── Advanced metrics (conditional) ──
-  const hasAdvanced = !!(validation?.precision !== undefined || validation?.recall !== undefined || validation?.f1_score !== undefined)
+  const hasAdvanced = !!(validation?.precision != null || validation?.recall != null || validation?.f1_score != null)
   const hasConfusion = !!(validation?.confusion_matrix && Array.isArray(validation.confusion_matrix))
   const advancedCards = hasAdvanced ? [
     { label: 'Precision', value: validation.precision != null ? parseFloat((validation.precision * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.precision), icon: Eye },
