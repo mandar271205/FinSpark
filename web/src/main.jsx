@@ -608,6 +608,12 @@ function QuantumVault({ vault, busy, testVault }) {
 /* ═══════════════════════════════════════════════
    HELPERS — Real-World Validation
 ═══════════════════════════════════════════════ */
+function toCsv(rows, columns) {
+  const header = columns.join(',');
+  const data = rows.map(row => columns.map(col => JSON.stringify(row[col] ?? '')).join(',')).join('\n');
+  return `${header}\n${data}`;
+}
+
 function getAccentForScore(val) {
   if (val == null) return 'cyan'
   if (val >= 0.85) return 'green'
