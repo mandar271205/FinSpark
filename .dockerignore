@@ -16,8 +16,8 @@ venv.bak/
 # Frontend
 frontend/
 
-# Git metadata is needed during remote Docker builds so Git LFS can pull
-# the real ML artifacts instead of leaving pointer files in artifacts/.
+# Git
+.git
 .gitignore
 
 # Jupyter notebooks
