@@ -479,25 +479,6 @@ with tab4:
 with tab5:
     st.header("⚡ Enterprise Real-Time Fraud Detection API")
 
-    # ==========================================
-    # ⚡ LATENCY FIX: Cache the Model Loading
-    # ==========================================
-    @st.cache_resource
-    def load_fraud_model():
-        try:
-            # We import ml_service directly to bypass network latency
-            from app.services import MLModelService
-            # Create a dedicated instance for Streamlit to avoid clashes
-            local_ml = MLModelService()
-            local_ml.load_models(artifacts_path="./artifacts")
-            return local_ml
-        except Exception as e:
-            st.error(f"Failed to load model: {e}")
-            return None # Agar model file nahi mili toh fallback toggle hoga
-
-    # Model ko memory mein ek hi baar load karlo
-    ml_model = load_fraud_model()
-
     # Input Form UI
     with st.form("single_txn_form"):
         col1, col2, col3 = st.columns(3)
@@ -545,37 +526,35 @@ with tab5:
             'hour_of_transaction': hour
         }])
         
-        # Convert df to dict for our specific ml_service 
+        # Convert df to dict for the FastAPI backend
         input_dict = input_data_df.iloc[0].to_dict()
-        
-        # Execution Block
-        if ml_model is not None and ml_model.initialized and ml_model.models is not None:
-            try:
-                # 1. Asli ML Model se prediction nikalna
-                risk_score, is_fraud, conf = ml_model.predict(input_dict)
-                raw_prediction = 1 if is_fraud else 0
-                
-                # 2. Hard Rules Layer (ML Model ke gaps ko fix karne ke liye)
-                if vel_24h > 20 and dev_mismatch == 1 and time_since <= 5:
-                    # Override Rule 1: High velocity + Device mismatch strictly FRAUD hai (Fixes Scenario 1)
-                    prediction = 1
-                    mode_text = "[ML + Velocity Rule Override]"
-                elif amount > 500000 and dev_mismatch == 0 and vel_24h == 1:
-                    # Override Rule 2: High value but trusted hardware & history is LEGIT (Fixes Scenario 2)
-                    prediction = 0
-                    mode_text = "[ML + Trusted VIP Override]"
-                else:
-                    # No rules broken, trust the ML Model blindly
-                    prediction = raw_prediction
-                    mode_text = "[ML Model Active]"
-            except Exception as e:
-                # Fallback if prediction logic fails inside ml_service
-                prediction = 1 if (amount > 300000 and dev_mismatch == 1) or vel_24h > 10 else 0
-                mode_text = f"[Fallback Rule Engine] - Error: {e}"
+
+        payload = {
+            "transaction_id": f"live-{uuid.uuid4().hex[:12]}",
+            "features": input_dict,
+        }
+
+        result = predict_fraud(payload)
+
+        if result:
+            raw_prediction = 1 if result.get("is_fraud") else 0
+            risk_score = float(result.get("risk_score", 0))
+            confidence = float(result.get("confidence_level", 0))
+
+            if vel_24h > 20 and dev_mismatch == 1 and time_since <= 5:
+                prediction = 1
+                mode_text = "[Backend ML + Velocity Rule Override]"
+            elif amount > 500000 and dev_mismatch == 0 and vel_24h == 1:
+                prediction = 0
+                mode_text = "[Backend ML + Trusted VIP Override]"
+            else:
+                prediction = raw_prediction
+                mode_text = "[Backend ML Model Active]"
         else:
-            # Full Fallback if Model file corrupts
             prediction = 1 if (amount > 300000 and dev_mismatch == 1) or vel_24h > 10 else 0
-            mode_text = "[Fallback Rule Engine]"
+            risk_score = 1.0 if prediction else 0.0
+            confidence = 0.0
+            mode_text = "[Fallback Rule Engine - Backend Unreachable]"
             
         end_time = time.time()
         latency = (end_time - start_time) * 1000 # Convert to milliseconds
@@ -586,3 +565,4 @@ with tab5:
             st.error(f"🚨 FRAUD DETECTED! (Processed in {latency:.2f} ms) {mode_text}")
         else:
             st.success(f"✅ LEGITIMATE TRANSACTION (Processed in {latency:.2f} ms) {mode_text}")
+        st.caption(f"Risk score: {risk_score:.4f} | Confidence: {confidence:.4f}")
