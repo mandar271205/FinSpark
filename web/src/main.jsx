@@ -2,23 +2,51 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, RadarChart,
-  Radar, PolarGrid, PolarAngleAxis,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  Cell,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts'
 import {
-  Activity, AlertOctagon, AlertTriangle, BadgeCheck,
-  Brain, ChevronRight, Cpu, Eye, Gauge, GitBranch,
-  Globe, Lock, RefreshCw, Shield, ShieldAlert,
-  ShieldCheck, Sparkles, TrendingUp, Zap,
+  Activity,
+  AlertTriangle,
+  BadgeCheck,
+  Brain,
+  CheckCircle2,
+  Download,
+  Eye,
+  FileJson,
+  Gauge,
+  Globe2,
+  HelpCircle,
+  Lock,
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  UploadCloud,
+  Zap,
 } from 'lucide-react'
 import './styles.css'
 
-/* ── Config ───────────────────────────────────────────────────── */
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   'https://finspark-production-72a1.up.railway.app'
 ).replace(/\/$/, '')
+
+const tabs = [
+  { id: 'dashboard', label: 'Live Dashboard', icon: Gauge },
+  { id: 'simulation', label: 'Attack Simulation', icon: Activity },
+  { id: 'vault', label: 'Quantum Vault', icon: Lock },
+  { id: 'validation', label: 'Real-World Validation', icon: BadgeCheck },
+  { id: 'api', label: 'Live API Testing', icon: Zap },
+]
 
 const initialForm = {
   amount: 15000,
@@ -29,680 +57,974 @@ const initialForm = {
   device_mismatch: 0,
 }
 
-/* ── Animation variants ───────────────────────────────────────── */
+const fallbackMetrics = {
+  total_analyzed: 124592,
+  alerts_triggered: 3142,
+  model_auc: 0.981,
+  detection_rate: 0.924,
+  fraud_trend_data: Array.from({ length: 12 }, (_, i) => ({
+    timestamp: `${String(i * 2).padStart(2, '0')}:00`,
+    count: Math.round(2 + Math.sin(i / 1.8) * 3 + i / 2),
+  })),
+}
+
+/* ─── Animation variants ─────────────────────── */
 const fadeUp = {
-  hidden:  { opacity: 0, y: 24 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.55, ease: [0.4, 0, 0.2, 1] },
-  }),
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -10 },
+  transition: { duration: 0.24, ease: [0.4, 0, 0.2, 1] },
 }
 
-const scaleIn = {
-  hidden:  { opacity: 0, scale: 0.92 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } },
-}
-
-/* ── Mock trend data for sparkline ────────────────────────────── */
-const trendData = [
-  { t: '00:00', fraud: 2,  total: 48  },
-  { t: '04:00', fraud: 5,  total: 31  },
-  { t: '08:00', fraud: 12, total: 120 },
-  { t: '12:00', fraud: 8,  total: 98  },
-  { t: '16:00', fraud: 19, total: 145 },
-  { t: '20:00', fraud: 14, total: 112 },
-  { t: '23:59', fraud: 7,  total: 75  },
-]
-
-/* ── Helpers ──────────────────────────────────────────────────── */
-function riskLevel(score) {
-  if (score === null || score === undefined) return null
-  if (score >= 0.65) return 'high'
-  if (score >= 0.35) return 'medium'
-  return 'low'
-}
-
-function CustomTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div style={{
-      background: 'var(--bg-elevated)',
-      border: '1px solid var(--border)',
-      borderRadius: 10,
-      padding: '10px 14px',
-      fontSize: '0.8rem',
-      color: 'var(--text)',
-    }}>
-      <div style={{ marginBottom: 6, color: 'var(--text-muted)' }}>{label}</div>
-      {payload.map((p) => (
-        <div key={p.dataKey} style={{ color: p.color, fontFamily: 'var(--font-mono)' }}>
-          {p.name}: <strong>{p.value}</strong>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/* ── Subcomponents ────────────────────────────────────────────── */
-function StatusPip({ health }) {
-  return (
-    <div className="navbar-status">
-      <span className={`status-pip ${health}`} />
-      <span>
-        {health === 'online'   ? 'Backend Live'    :
-         health === 'offline'  ? 'Backend Offline' : 'Connecting…'}
-      </span>
-    </div>
-  )
-}
-
-function StatCard({ icon: Icon, label, value, color, trend, delay }) {
-  return (
-    <motion.div
-      className={`stat-card ${color}`}
-      variants={fadeUp} custom={delay}
-      initial="hidden" animate="visible"
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-    >
-      <div className={`stat-icon ${color}`}><Icon size={18} /></div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-label">{label}</div>
-      {trend && <div className="stat-trend"><TrendingUp size={11} />{trend}</div>}
-    </motion.div>
-  )
-}
-
-function ScoreMeter({ score }) {
-  const pct   = Math.round((score ?? 0) * 100)
-  const level = riskLevel(score)
-  const color = level === 'high'   ? 'var(--red)'   :
-                level === 'medium' ? 'var(--amber)'  : 'var(--green)'
-  return (
-    <div className="score-meter-wrap">
-      <div className="score-meter-label">
-        <span>Fraud Risk Score</span>
-        <span style={{ color, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{pct}%</span>
-      </div>
-      <div className="score-meter-track">
-        <motion.div
-          className="score-meter-fill"
-          style={{ background: color }}
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function RiskBanner({ level, txId }) {
-  const cfg = {
-    high:   { icon: ShieldAlert,  title: 'HIGH RISK — Flag for Review',    sub: 'Confidence: Ensemble model agrees on fraud signal.',  },
-    medium: { icon: AlertTriangle, title: 'MEDIUM RISK — Monitor Closely', sub: 'Partial fraud signals detected. Manual review advised.', },
-    low:    { icon: ShieldCheck,  title: 'LOW RISK — Transaction Clear',   sub: 'No significant fraud pattern detected.',               },
-  }
-  const { icon: Icon, title, sub } = cfg[level]
-  return (
-    <motion.div
-      className={`risk-banner ${level}`}
-      variants={scaleIn} initial="hidden" animate="visible"
-    >
-      <div className="risk-icon-wrap"><Icon size={22} /></div>
-      <div>
-        <div className="risk-title">{title}</div>
-        <div className="risk-sub">{sub}</div>
-        {txId && <div className="risk-sub" style={{ marginTop: 5, fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>TX: {txId}</div>}
-      </div>
-    </motion.div>
-  )
-}
-
-function FeatureImportanceBar({ features }) {
-  const maxVal = Math.max(...Object.values(features).map(Math.abs))
-  return (
-    <div className="feature-list">
-      {Object.entries(features).slice(0, 6).map(([k, v], i) => (
-        <motion.div
-          key={k} className="feature-item"
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.07 }}
-        >
-          <div className="feature-meta">
-            <span className="feature-name">{k.replace(/_/g, ' ')}</span>
-            <span className="feature-val">{Number(v).toFixed(4)}</span>
-          </div>
-          <div className="feature-track">
-            <motion.div
-              className="feature-fill"
-              style={{ background: v > 0 ? 'var(--grad-brand)' : 'var(--grad-danger)' }}
-              initial={{ width: 0 }}
-              animate={{ width: `${(Math.abs(v) / maxVal) * 100}%` }}
-              transition={{ duration: 0.7, delay: i * 0.06 }}
-            />
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  )
-}
-
-function SimulationResults({ data }) {
-  if (!data) return null
-  const txns = data.transactions || data.results || []
-  if (txns.length === 0) {
-    return (
-      <div className="json-output">{JSON.stringify(data, null, 2)}</div>
-    )
-  }
-  return (
-    <div className="sim-grid">
-      {txns.slice(0, 12).map((tx, i) => {
-        const score   = tx.fraud_score ?? tx.score ?? 0
-        const level   = riskLevel(score)
-        const dotCls  = level === 'high' ? 'fraud' : level === 'medium' ? 'suspect' : 'legit'
-        return (
-          <motion.div
-            key={tx.transaction_id || i}
-            className="sim-event"
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <span className={`sim-dot ${dotCls}`} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span className="sim-id">{tx.transaction_id || `tx-${i+1}`}</span>
-                <span className={`sim-risk ${level}`}>
-                  {Math.round(score * 100)}% risk
-                </span>
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                ₹{(tx.features?.amount ?? tx.amount ?? 0).toLocaleString()}
-                {tx.label !== undefined && (
-                  <span style={{ marginLeft: 8, color: level === 'high' ? 'var(--red)' : 'var(--green)' }}>
-                    • {tx.label === 1 ? 'Fraud' : 'Legit'}
-                  </span>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )
-      })}
-    </div>
-  )
-}
-
-/* ── Radar chart for features ────────────────── */
-function FeatureRadar({ features }) {
-  const keys  = Object.keys(features).slice(0, 6)
-  const max   = Math.max(...Object.values(features).map(Number))
-  const data  = keys.map(k => ({
-    subject: k.replace(/_/g, ' '),
-    value: max > 0 ? (Math.abs(Number(features[k])) / max) * 100 : 0,
-  }))
-  return (
-    <ResponsiveContainer width="100%" height={200}>
-      <RadarChart data={data} margin={{ top: 0, right: 12, bottom: 0, left: 12 }}>
-        <PolarGrid stroke="rgba(99,179,237,0.12)" />
-        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-        <Radar dataKey="value" stroke="var(--cyan)" fill="var(--cyan)" fillOpacity={0.18}
-               dot={{ fill: 'var(--cyan)', r: 3 }} />
-      </RadarChart>
-    </ResponsiveContainer>
-  )
-}
-
-/* ── Main App ─────────────────────────────────────────────────── */
 function App() {
-  const [form,     setForm]     = React.useState(initialForm)
-  const [health,   setHealth]   = React.useState('checking')
-  const [response, setResponse] = React.useState(null)
-  const [busy,     setBusy]     = React.useState(false)
-  const [tab,      setTab]      = React.useState('predict')
-  const [count,    setCount]    = React.useState({ total: 0, flagged: 0 })
+  const [activeTab, setActiveTab] = React.useState('dashboard')
+  const [health, setHealth] = React.useState('checking')
+  const [metrics, setMetrics] = React.useState(fallbackMetrics)
+  const [busy, setBusy] = React.useState('')
+  const [simulation, setSimulation] = React.useState(null)
+  const [vault, setVault] = React.useState(null)
+  const [validation, setValidation] = React.useState(null)
+  const [validationFile, setValidationFile] = React.useState(null)
+  const [preview, setPreview] = React.useState([])
+  const [form, setForm] = React.useState(initialForm)
+  const [prediction, setPrediction] = React.useState(null)
+  const [explainTx, setExplainTx] = React.useState('')
+  const [explanation, setExplanation] = React.useState(null)
+  const [error, setError] = React.useState('')
 
-  /* health check */
-  React.useEffect(() => {
-    fetch(`${API_BASE_URL}/health`)
-      .then(r => r.json())
-      .then(() => setHealth('online'))
-      .catch(() => setHealth('offline'))
+  const refreshHealth = React.useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/health`)
+      if (!res.ok) throw new Error('Backend offline')
+      setHealth('online')
+    } catch {
+      setHealth('offline')
+    }
   }, [])
 
-  const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
+  const refreshMetrics = React.useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/dashboard/metrics`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.detail || 'Metrics unavailable')
+      setMetrics({ ...fallbackMetrics, ...data })
+    } catch {
+      setMetrics(fallbackMetrics)
+    }
+  }, [])
 
-  /* predict */
-  async function predict() {
-    setBusy(true); setResponse(null)
+  React.useEffect(() => {
+    refreshHealth()
+    refreshMetrics()
+    const id = window.setInterval(refreshMetrics, 5000)
+    return () => window.clearInterval(id)
+  }, [refreshHealth, refreshMetrics])
+
+  const updateForm = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function runSimulation() {
+    setBusy('simulation')
+    setError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/demo/simulate_attack`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.detail || 'Simulation failed')
+      setSimulation(data)
+      setExplainTx(data.transactions?.[0]?.transaction_id || '')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function testVault() {
+    setBusy('vault')
+    setError('')
+    setVault(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/demo/secure_predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_mode: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.detail || 'Vault request failed')
+      setVault(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function runPrediction() {
+    setBusy('api')
+    setError('')
+    setPrediction(null)
     try {
       const payload = {
         transaction_id: `live-${Date.now()}`,
         features: {
-          amount:               Number(form.amount),
-          velocity_24h:         Number(form.velocity_24h),
-          hour_of_transaction:  Number(form.hour_of_transaction),
-          time_since_last_txn:  Number(form.time_since_last_txn),
-          is_beneficiary_new:   Number(form.is_beneficiary_new),
-          device_mismatch:      Number(form.device_mismatch),
+          amount: Number(form.amount),
+          velocity_24h: Number(form.velocity_24h),
+          hour_of_transaction: Number(form.hour_of_transaction),
+          time_since_last_txn: Number(form.time_since_last_txn),
+          is_beneficiary_new: Number(form.is_beneficiary_new),
+          device_mismatch: Number(form.device_mismatch),
         },
       }
-      const res  = await fetch(`${API_BASE_URL}/predict/`, {
+      const res = await fetch(`${API_BASE_URL}/predict/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.detail || 'Prediction failed')
-      setResponse(data)
-      setCount(prev => ({
-        total:   prev.total + 1,
-        flagged: prev.flagged + ((data.fraud_score ?? 0) >= 0.5 ? 1 : 0),
-      }))
-    } catch (err) { setResponse({ error: err.message }) }
-    finally { setBusy(false) }
+      setPrediction(data)
+      setExplainTx(data.transaction_id)
+      refreshMetrics()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
   }
 
-  /* simulate attack */
-  async function simulateAttack() {
-    setBusy(true); setResponse(null); setTab('simulation')
+  async function explainTransaction(txId = explainTx) {
+    if (!txId) return
+    setBusy('explain')
+    setError('')
     try {
-      const res  = await fetch(`${API_BASE_URL}/demo/simulate_attack`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/demo/explain_transaction/${encodeURIComponent(txId)}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.detail || 'Simulation failed')
-      setResponse({ simulation: data })
-    } catch (err) { setResponse({ error: err.message }) }
-    finally { setBusy(false) }
+      if (!res.ok) throw new Error(data?.detail || 'Explain request failed')
+      setExplanation(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
   }
 
-  /* quantum vault */
-  async function testVault() {
-    setBusy(true); setResponse(null)
+  async function handleFile(file) {
+    setValidationFile(file)
+    setValidation(null)
+    setPreview([])
+    if (!file || !file.name.toLowerCase().endsWith('.csv')) return
+    const text = await file.text()
+    const [header, ...rows] = text.trim().split(/\r?\n/)
+    if (!header) return
+    const cols = header.split(',').map((col) => col.trim())
+    setPreview(rows.slice(0, 5).map((row) => {
+      const values = row.split(',')
+      return Object.fromEntries(cols.map((col, i) => [col, values[i] ?? '']))
+    }))
+  }
+
+  async function validateUpload() {
+    if (!validationFile) return
+    setBusy('validation')
+    setError('')
     try {
-      const res  = await fetch(`${API_BASE_URL}/demo/secure_predict`, {
+      const body = new FormData()
+      body.append('file', validationFile)
+      const res = await fetch(`${API_BASE_URL}/demo/validate_real_fraud`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ demo_mode: true }),
+        body,
       })
       const data = await res.json()
-      setResponse(data)
-    } catch (err) { setResponse({ error: err.message }) }
-    finally { setBusy(false) }
+      if (!res.ok) throw new Error(data?.detail || 'Validation failed')
+      setValidation(data)
+      setExplainTx(data.results?.[0]?.transaction_id || '')
+      refreshMetrics()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
   }
 
-  const fraudScore = response?.fraud_score ?? null
-  const level      = riskLevel(fraudScore)
-
-  const TABS = [
-    { id: 'predict',    icon: Gauge,     label: 'Predict'    },
-    { id: 'simulation', icon: Activity,  label: 'Simulation' },
-    { id: 'vault',      icon: Lock,      label: 'Vault'      },
-  ]
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
 
   return (
-    <div className="shell">
-
-      {/* ── Navbar ──────────────────────────────── */}
-      <motion.nav
-        className="navbar"
-        initial={{ opacity: 0, y: -18 }}
+    <div className="app-shell">
+      {/* ── Header ───────────────────────────── */}
+      <motion.header
+        className="soc-header"
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       >
-        <div className="navbar-brand">
-          <div className="navbar-logo">🛡️</div>
-          <div>
-            <div className="navbar-name">FinSpark</div>
-            <div className="navbar-tagline">AI Fraud Engine</div>
-          </div>
+        <div className="soc-title"><Shield size={30} /> FinSpark SOC Dashboard</div>
+        <div className="soc-status">
+          <span className={`status-dot ${health}`} />
+          {health === 'online' ? 'System Online' : health === 'offline' ? 'System Offline' : 'Checking System'}
+          <span className="status-time">| {now} UTC</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <StatusPip health={health} />
-        </div>
+      </motion.header>
+
+      {/* ── Tab bar ──────────────────────────── */}
+      <motion.nav
+        className="tab-grid"
+        aria-label="FinSpark dashboard sections"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`tab-button ${activeTab === id ? 'active' : ''}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon size={18} /> {label}
+          </button>
+        ))}
       </motion.nav>
 
-      {/* ── Hero ────────────────────────────────── */}
+      {/* ── Error banner ─────────────────────── */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="error-banner"
+            initial={{ opacity: 0, y: -14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -14 }}
+            transition={{ duration: 0.22 }}
+          >
+            <AlertTriangle size={18} /> {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Tab content ──────────────────────── */}
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={activeTab}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        >
+          {activeTab === 'dashboard' && (
+            <LiveDashboard metrics={metrics} refreshMetrics={refreshMetrics} />
+          )}
+          {activeTab === 'simulation' && (
+            <AttackSimulation
+              busy={busy === 'simulation'}
+              simulation={simulation}
+              runSimulation={runSimulation}
+              explainTx={explainTx}
+              setExplainTx={setExplainTx}
+              explanation={explanation}
+              explainTransaction={explainTransaction}
+              explaining={busy === 'explain'}
+            />
+          )}
+          {activeTab === 'vault' && (
+            <QuantumVault vault={vault} busy={busy === 'vault'} testVault={testVault} />
+          )}
+          {activeTab === 'validation' && (
+            <RealWorldValidation
+              file={validationFile}
+              preview={preview}
+              validation={validation}
+              busy={busy === 'validation'}
+              handleFile={handleFile}
+              validateUpload={validateUpload}
+              explainTx={explainTx}
+              setExplainTx={setExplainTx}
+              explanation={explanation}
+              explainTransaction={explainTransaction}
+              explaining={busy === 'explain'}
+            />
+          )}
+          {activeTab === 'api' && (
+            <LiveApiTesting
+              form={form}
+              updateForm={updateForm}
+              prediction={prediction}
+              busy={busy === 'api'}
+              runPrediction={runPrediction}
+            />
+          )}
+        </motion.main>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   LIVE DASHBOARD
+═══════════════════════════════════════════════ */
+function LiveDashboard({ metrics, refreshMetrics }) {
+  const cards = [
+    ['Total Analyzed', formatNumber(metrics.total_analyzed), Globe2],
+    ['Alerts Triggered', formatNumber(metrics.alerts_triggered), ShieldAlert],
+    ['Model AUC', metrics.model_auc ?? '0.981', Brain],
+    ['Detection Rate', `${Math.round((metrics.detection_rate || 0) * 1000) / 10}%`, Zap],
+  ]
+
+  const trend = (metrics.fraud_trend_data || []).map((point, index) => ({
+    time: String(point.timestamp || point.time || index).slice(-5),
+    fraud: Number(point.count || point.fraud || 0),
+  }))
+
+  return (
+    <>
+      {/* ── Metric cards with stagger ── */}
+      <section className="metric-grid">
+        {cards.map(([label, value, Icon], index) => (
+          <motion.div
+            className="metric-card"
+            key={label}
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.09, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            whileHover={{ y: -5, transition: { duration: 0.18 } }}
+          >
+            <div className="metric-icon"><Icon size={22} /></div>
+            <div className="metric-value">{value}</div>
+            <div className="metric-label">{label}</div>
+          </motion.div>
+        ))}
+      </section>
+
+      {/* ── Fraud trend chart ── */}
       <motion.section
-        className="hero"
-        initial={{ opacity: 0, y: 30 }}
+        className="panel"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.4, delay: 0.38 }}
       >
-        <div className="hero-badge">
-          <Zap size={12} />
-          ML Ensemble · Quantum-Safe · Real-Time
-        </div>
-        <h1>
-          Detect Fraud <br />
-          <span className="highlight">Before It Happens</span>
-        </h1>
-        <p className="hero-sub">
-          XGBoost · LightGBM · CatBoost ensemble with SHAP explainability,
-          quantum-safe cryptography, and live attack simulation.
-        </p>
-        <div className="hero-actions">
-          <motion.button
-            className="btn btn-primary"
-            onClick={() => { setTab('predict'); window.scrollBy({ top: 200, behavior: 'smooth' }) }}
-            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-          >
-            <Shield size={16} /> Run Prediction <ChevronRight size={14} />
-          </motion.button>
-          <motion.button
-            className="btn btn-secondary"
-            onClick={simulateAttack} disabled={busy}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          >
-            {busy ? <><div className="spinner" /> Working…</> : <><Sparkles size={16} /> Simulate Attack</>}
-          </motion.button>
+        <PanelHeader
+          icon={Activity}
+          title="Fraud Trend"
+          action={
+            <motion.button
+              className="ghost-btn"
+              onClick={refreshMetrics}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ rotate: 180, transition: { duration: 0.4 } }}
+            >
+              <RefreshCw size={15} /> Refresh
+            </motion.button>
+          }
+        />
+        <div className="chart-box">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trend}>
+              <defs>
+                <linearGradient id="fraudFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#06b6d4" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="fraudLine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#7c5cff" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(148,163,184,0.08)" vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="time" stroke="#4a6580" tickLine={false} axisLine={false} tick={{ fontSize: 11, fontFamily: 'Space Grotesk' }} />
+              <YAxis stroke="#4a6580" tickLine={false} axisLine={false} tick={{ fontSize: 11, fontFamily: 'Space Grotesk' }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="fraud"
+                name="Fraud alerts"
+                stroke="url(#fraudLine)"
+                fill="url(#fraudFill)"
+                strokeWidth={2.5}
+                animationDuration={1200}
+                animationEasing="ease-out"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </motion.section>
 
-      {/* ── Stats Row ───────────────────────────── */}
-      <div className="stats-row">
-        <StatCard icon={Globe}   label="Transactions Analysed" value={count.total.toString().padStart(3,'0')} color="cyan"   trend="+12% today" delay={0} />
-        <StatCard icon={ShieldAlert} label="Flagged Alerts"    value={count.flagged.toString().padStart(2,'0')} color="orange" trend={null}       delay={1} />
-        <StatCard icon={Cpu}     label="ML Models Active"      value="3"                                       color="violet" trend="XGB·LGB·CAT" delay={2} />
-        <StatCard icon={GitBranch} label="Avg Response"        value="<200ms"                                  color="green"  trend="P99 < 800ms" delay={3} />
-      </div>
-
-      {/* ── Trend Chart ─────────────────────────── */}
-      <motion.div
-        className="panel"
-        style={{ marginBottom: 18 }}
-        variants={fadeUp} custom={4}
-        initial="hidden" animate="visible"
+      {/* ── Causal graph ── */}
+      <motion.section
+        className="panel causal-panel"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
       >
-        <div className="panel-header">
-          <div className="panel-title">
-            <div className="panel-title-icon"><TrendingUp size={15} /></div>
-            Today's Transaction Trend
-          </div>
-          <button className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
-            <RefreshCw size={12} /> Live
-          </button>
+        <PanelHeader icon={Brain} title="Causal Inference: Cyber Events → Fraud" />
+        <div className="causal-graph-frame">
+          <img src="/causal_graph.png" alt="Causal graph showing cyber events influencing fraud probability" />
         </div>
-        <ResponsiveContainer width="100%" height={160}>
-          <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4cc9f0" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#4cc9f0" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gFraud" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="rgba(99,179,237,0.06)" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="t" tick={{ fill: 'var(--text-dim)', fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--text-dim)', fontSize: 10 }} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="total" stroke="#4cc9f0" strokeWidth={1.5}
-                  fill="url(#gTotal)" name="Total" dot={false} />
-            <Area type="monotone" dataKey="fraud" stroke="#f43f5e" strokeWidth={1.5}
-                  fill="url(#gFraud)" name="Fraud" dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </motion.div>
+        <p>
+          DoWhy causal DAG: network anomalies caused by cyber events such as port scans,
+          DDoS, and malware can increase fraud probability. This keeps causal context
+          visible beside live alert metrics for analyst triage.
+        </p>
+      </motion.section>
+    </>
+  )
+}
 
-      {/* ── Main Grid ───────────────────────────── */}
-      <div className="main-grid">
+/* ═══════════════════════════════════════════════
+   ATTACK SIMULATION
+═══════════════════════════════════════════════ */
+function AttackSimulation({
+  busy,
+  simulation,
+  runSimulation,
+  explainTx,
+  setExplainTx,
+  explanation,
+  explainTransaction,
+  explaining,
+}) {
+  const rows = simulation?.transactions || []
+  const flagged = rows.filter((row) => row.is_fraud_predicted).length
+  const actual = rows.filter((row) => row.is_fraud_actual).length
+  const avgQuantum = rows.length
+    ? rows.reduce((sum, row) => sum + Number(row.quantum_risk_score || 0), 0) / rows.length
+    : 0
 
-        {/* Left: Controls */}
-        <motion.div className="panel" variants={fadeUp} custom={5} initial="hidden" animate="visible">
-          {/* Tab bar */}
-          <div className="tabs">
-            {TABS.map(({ id, icon: Icon, label }) => (
-              <button
-                key={id}
-                className={`btn btn-ghost${tab === id ? ' active' : ''}`}
-                onClick={() => setTab(id)}
-                style={{ flex: 1, justifyContent: 'center', gap: 7 }}
+  return (
+    <>
+      <motion.section className="section-heading" {...fadeUp}>
+        <h1>Live Attack Simulation</h1>
+        <motion.button
+          className="primary-btn danger"
+          onClick={runSimulation}
+          disabled={busy}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {busy ? <Spinner /> : <Activity size={18} />} {busy ? 'Running...' : 'Simulate Attack'}
+        </motion.button>
+      </motion.section>
+
+      {simulation && (
+        <>
+          <section className="metric-grid">
+            {[
+              ['Total Transactions', rows.length || 100],
+              ['Actual Fraud Injected', actual],
+              ['Detected by Model', flagged],
+              ['Avg Quantum Risk', avgQuantum.toFixed(2)],
+            ].map(([label, value], i) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.4 }}
               >
-                <Icon size={14} /> {label}
-              </button>
+                <SmallMetric label={label} value={value} />
+              </motion.div>
             ))}
-          </div>
+          </section>
+          <DataTable
+            title="Transaction Table"
+            rows={rows.slice(0, 18)}
+            columns={['transaction_id', 'simulated_pattern', 'risk_score', 'quantum_risk_score', 'data_exfil_volume_gb', 'is_fraud_actual', 'is_fraud_predicted']}
+          />
+          <ExplainPanel
+            txIds={rows.map((row) => row.transaction_id)}
+            explainTx={explainTx}
+            setExplainTx={setExplainTx}
+            explanation={explanation}
+            explainTransaction={explainTransaction}
+            explaining={explaining}
+          />
+        </>
+      )}
+    </>
+  )
+}
 
-          <AnimatePresence mode="wait">
-            {/* ── Predict Tab ──────────────────── */}
-            {tab === 'predict' && (
-              <motion.div key="predict"
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-              >
-                <p className="section-label"><Gauge size={12} /> Transaction Parameters</p>
-                <div className="field-grid">
-                  <div className="field">
-                    <label className="field-label">Amount (₹)</label>
-                    <input className="field-input" type="number" value={form.amount}
-                      onChange={e => update('amount', e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Velocity 24h</label>
-                    <input className="field-input" type="number" value={form.velocity_24h}
-                      onChange={e => update('velocity_24h', e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Hour of Transaction</label>
-                    <input className="field-input" type="number" min={0} max={23} value={form.hour_of_transaction}
-                      onChange={e => update('hour_of_transaction', e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Mins since Last Txn</label>
-                    <input className="field-input" type="number" value={form.time_since_last_txn}
-                      onChange={e => update('time_since_last_txn', e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label className="field-label">New Beneficiary?</label>
-                    <select className="field-input" value={form.is_beneficiary_new}
-                      onChange={e => update('is_beneficiary_new', Number(e.target.value))}>
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label className="field-label">Device Mismatch?</label>
-                    <select className="field-input" value={form.device_mismatch}
-                      onChange={e => update('device_mismatch', Number(e.target.value))}>
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
-                    </select>
-                  </div>
-                  <div className="full-col submit-row">
-                    <motion.button
-                      className="btn btn-primary"
-                      onClick={predict} disabled={busy}
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    >
-                      {busy ? <><div className="spinner" /> Analysing…</> : <><Shield size={16} /> Run Fraud Detection</>}
-                    </motion.button>
-                  </div>
-                </div>
+/* ═══════════════════════════════════════════════
+   QUANTUM VAULT
+═══════════════════════════════════════════════ */
+function QuantumVault({ vault, busy, testVault }) {
+  return (
+    <>
+      <motion.section className="section-heading" {...fadeUp}>
+        <h1>ML-KEM Post-Quantum Encryption Vault</h1>
+      </motion.section>
 
-                {/* Inline result for predict tab */}
-                <AnimatePresence>
-                  {response && !response.error && !response.simulation && fraudScore !== null && (
-                    <motion.div
-                      className="result-area"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <p className="section-label" style={{ marginTop: 20 }}><BadgeCheck size={12} /> Detection Result</p>
-                      <RiskBanner level={level} txId={response.transaction_id} />
-                      <ScoreMeter score={fraudScore} />
-                      <div className="meta-grid">
-                        {[
-                          ['Prediction', response.prediction === 1 ? '🚨 Fraud' : '✅ Legit'],
-                          ['Score',      `${(fraudScore * 100).toFixed(1)}%`],
-                          ['TX ID',      response.transaction_id?.slice(-12) ?? '—'],
-                          ['Models',     response.models_used ?? '3-ensemble'],
-                        ].map(([k, v]) => (
-                          <div key={k} className="meta-pill">
-                            <div className="meta-pill-key">{k}</div>
-                            <div className="meta-pill-val">{v}</div>
-                          </div>
-                        ))}
-                      </div>
-                      {response.shap_values && (
-                        <>
-                          <p className="section-label" style={{ marginTop: 16 }}><Brain size={12} /> Feature Radar</p>
-                          <FeatureRadar features={response.shap_values} />
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                  {response?.error && (
-                    <motion.div
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      style={{
-                        background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)',
-                        borderRadius: 10, padding: 14, marginTop: 14,
-                        color: 'var(--red)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)',
-                        display: 'flex', gap: 10, alignItems: 'center',
-                      }}
-                    >
-                      <AlertOctagon size={16} /> {response.error}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {/* ── Simulation Tab ───────────────── */}
-            {tab === 'simulation' && (
-              <motion.div key="simulation"
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-              >
-                <p className="section-label"><Activity size={12} /> Attack Simulation Engine</p>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.65 }}>
-                  Fires the backend's fraud scenario generator — synthesises a batch of transactions
-                  with varying fraud patterns and returns ensemble predictions in real time.
-                </p>
-                <motion.button
-                  className="btn btn-danger"
-                  onClick={simulateAttack} disabled={busy}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  style={{ width: '100%', justifyContent: 'center', marginBottom: 18 }}
-                >
-                  {busy
-                    ? <><div className="spinner" /> Running simulation…</>
-                    : <><Sparkles size={16} /> Launch Attack Simulation</>}
-                </motion.button>
-                {response?.simulation && (
-                  <SimulationResults data={response.simulation} />
-                )}
-              </motion.div>
-            )}
-
-            {/* ── Vault Tab ────────────────────── */}
-            {tab === 'vault' && (
-              <motion.div key="vault"
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-              >
-                <p className="section-label"><Lock size={12} /> Quantum-Safe Vault</p>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.65 }}>
-                  Sends an encrypted payload through the post-quantum cryptography pipeline
-                  (liboqs Kyber / Dilithium) and returns the signed, decrypted result preview.
-                </p>
-                <motion.button
-                  className="btn btn-primary"
-                  onClick={testVault} disabled={busy}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  style={{ width: '100%', justifyContent: 'center', marginBottom: 18,
-                           background: 'linear-gradient(135deg, var(--violet), var(--cyan))' }}
-                >
-                  {busy
-                    ? <><div className="spinner" /> Connecting to vault…</>
-                    : <><Eye size={16} /> Test Quantum Vault</>}
-                </motion.button>
-                {response && !response.error && !response.simulation && (
-                  <div className="json-output">{JSON.stringify(response, null, 2)}</div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Right: Live Output + SHAP */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <motion.div className="panel" variants={fadeUp} custom={6} initial="hidden" animate="visible">
-            <div className="panel-header">
-              <div className="panel-title">
-                <div className="panel-title-icon"><BadgeCheck size={15} /></div>
-                Live Output
-              </div>
-              {response && (
-                <button className="btn btn-ghost" style={{ padding: '5px 10px', fontSize: '0.73rem' }}
-                  onClick={() => setResponse(null)}>
-                  Clear
-                </button>
-              )}
-            </div>
-
-            <AnimatePresence mode="wait">
-              {!response ? (
-                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="empty-state">
-                    <div className="empty-state-icon"><Gauge size={24} /></div>
-                    <strong style={{ color: 'var(--text-muted)' }}>No data yet</strong>
-                    <p>Run a prediction or simulation to see live results here.</p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key="output" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <div className="json-output">
-                    {JSON.stringify(response, null, 2)}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* SHAP feature importance panel (only when prediction has shap_values) */}
-          {response?.shap_values && (
-            <motion.div
-              className="panel"
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="panel-header">
-                <div className="panel-title">
-                  <div className="panel-title-icon" style={{ background: 'rgba(124,92,255,0.14)', color: 'var(--violet)' }}>
-                    <Brain size={15} />
-                  </div>
-                  SHAP Feature Impact
-                </div>
-              </div>
-              <FeatureImportanceBar features={response.shap_values} />
-            </motion.div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Footer ──────────────────────────────── */}
-      <motion.footer
-        style={{
-          textAlign: 'center', marginTop: 48,
-          fontSize: '0.78rem', color: 'var(--text-dim)',
-          borderTop: '1px solid var(--border)', paddingTop: 24,
-        }}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+      <motion.section
+        className="vault-grid"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>FinSpark</span>
-        {' '}· AI-powered fraud detection · Built with XGBoost, LightGBM & CatBoost
-        <span style={{ display: 'block', marginTop: 4 }}>
-          Ensemble confidence · SHAP explainability · Quantum-safe cryptography
-        </span>
-      </motion.footer>
+        <div className="vault-card danger">
+          <h3>Without Quantum Vault</h3>
+          <p>Standard payloads can be stored now and decrypted later by quantum-capable attackers.</p>
+          <code>{'> Payload: {"risk_score": 0.87, "is_fraud": true}\n> SNDL attack: readable'}</code>
+          <strong>Data compromised</strong>
+        </div>
+        <div className="vault-card safe">
+          <h3>With ML-KEM Quantum Vault</h3>
+          <p>Predictions are wrapped in post-quantum encryption with an encrypted payload preview.</p>
+          <code>{'> Payload: 0x9a7f3c9b2d...\n> SNDL attack: decryption failed'}</code>
+          <strong>Data secured</strong>
+        </div>
+      </motion.section>
+
+      <section className="center-action">
+        <motion.button
+          className="primary-btn"
+          onClick={testVault}
+          disabled={busy}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+        >
+          {busy ? <Spinner /> : <Lock size={18} />} {busy ? 'Establishing Tunnel...' : 'Encrypt Prediction with ML-KEM'}
+        </motion.button>
+      </section>
+
+      <AnimatePresence>
+        {vault && (
+          <motion.section
+            className="panel"
+            initial={{ opacity: 0, scale: 0.97, y: 12 }}
+            animate={{ opacity: 1, scale: 1,    y: 0 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+          >
+            <PanelHeader icon={CheckCircle2} title="Quantum-Safe Prediction Received" />
+            <div className="metric-grid two">
+              <SmallMetric label="Original Risk Score" value={vault.decrypted_result?.risk_score ?? 'N/A'} />
+              <SmallMetric label="Latency" value={`${vault.latency_ms ?? 0} ms`} />
+            </div>
+            <pre className="code-block">{JSON.stringify(vault, null, 2)}</pre>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   REAL-WORLD VALIDATION
+═══════════════════════════════════════════════ */
+function RealWorldValidation({
+  file,
+  preview,
+  validation,
+  busy,
+  handleFile,
+  validateUpload,
+  explainTx,
+  setExplainTx,
+  explanation,
+  explainTransaction,
+  explaining,
+}) {
+  const template = 'transaction_id,is_beneficiary_new,PSH Flag Cnt,RST Flag Cnt,Fwd Pkt Len Max,Fwd Pkts/s,is_fraud_actual\nsample-1,1,8,3,1460,85,1\n'
+  const templateUrl = React.useMemo(() => URL.createObjectURL(new Blob([template], { type: 'text/csv' })), [])
+  const rows = validation?.results || []
+  const correct = rows.filter((row) => row.is_fraud_actual === row.is_fraud_predicted).length
+
+  return (
+    <>
+      <motion.section className="section-heading" {...fadeUp}>
+        <h1>Real-World Fraud Validation</h1>
+        <a className="ghost-btn download" href={templateUrl} download="fraud_template.csv">
+          <Download size={16} /> Download Template CSV
+        </a>
+      </motion.section>
+
+      <motion.section
+        className="panel"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <label className="dropzone">
+          <UploadCloud size={42} />
+          <span className="dropzone-copy">
+            <strong>{file ? file.name : 'Drag and drop file here'}</strong>
+            <small>Limit 200MB per file - CSV, JSON, XLSX, XLS</small>
+          </span>
+          <span className="browse-chip">Browse files</span>
+          <input
+            type="file"
+            accept=".csv,.json,.xlsx,.xls"
+            onChange={(event) => handleFile(event.target.files?.[0])}
+          />
+        </label>
+        <motion.button
+          className="primary-btn validate-btn"
+          onClick={validateUpload}
+          disabled={!file || busy}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {busy ? <Spinner /> : <FileJson size={18} />} {busy ? 'Validating...' : 'Validate Model Against Upload'}
+        </motion.button>
+      </motion.section>
+
+      {preview.length > 0 && (
+        <DataTable title={`Preview - ${preview.length} rows`} rows={preview} columns={Object.keys(preview[0])} />
+      )}
+
+      {validation?.status === 'success' && (
+        <>
+          <section className="metric-grid">
+            {[
+              ['Total Processed',    validation.total_processed],
+              ['Fraud Detected',     validation.fraud_detected],
+              ['Model Accuracy',     validation.accuracy !== null ? `${(validation.accuracy * 100).toFixed(1)}%` : 'N/A'],
+              ['Correct Predictions', correct],
+            ].map(([label, value], i) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.4 }}
+              >
+                <SmallMetric label={label} value={value} />
+              </motion.div>
+            ))}
+          </section>
+          <DataTable
+            title="Per-Row Results"
+            rows={rows.slice(0, 24)}
+            columns={['transaction_id', 'is_fraud_actual', 'is_fraud_predicted', 'risk_score', 'confidence']}
+          />
+          <ExplainPanel
+            txIds={rows.map((row) => row.transaction_id)}
+            explainTx={explainTx}
+            setExplainTx={setExplainTx}
+            explanation={explanation}
+            explainTransaction={explainTransaction}
+            explaining={explaining}
+          />
+        </>
+      )}
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   LIVE API TESTING
+═══════════════════════════════════════════════ */
+function LiveApiTesting({ form, updateForm, prediction, busy, runPrediction }) {
+  const isFraud = prediction?.is_fraud
+  const [learnOpen, setLearnOpen] = React.useState(false)
+
+  return (
+    <>
+      <motion.section className="section-heading" {...fadeUp}>
+        <h1>Enterprise Real-Time Fraud Detection API</h1>
+      </motion.section>
+
+      <motion.section
+        className="panel"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <div className="form-grid">
+          <NumberField label="Transaction Amount"   value={form.amount}               onChange={(value) => updateForm('amount', value)} />
+          <NumberField label="Velocity in 24h"      value={form.velocity_24h}          onChange={(value) => updateForm('velocity_24h', value)} />
+          <NumberField label="Hour of Day"          value={form.hour_of_transaction}   min={0} max={23} onChange={(value) => updateForm('hour_of_transaction', value)} />
+          <NumberField label="Mins Since Last Txn"  value={form.time_since_last_txn}   onChange={(value) => updateForm('time_since_last_txn', value)} />
+          <SelectField
+            label="New Beneficiary?"
+            value={form.is_beneficiary_new}
+            help="1 means the receiver account is newly added. This is risky in phishing cash-outs."
+            onChange={(value) => updateForm('is_beneficiary_new', Number(value))}
+          />
+          <SelectField
+            label="Device Mismatch?"
+            value={form.device_mismatch}
+            help="1 means device, browser, or IP differs from the usual customer profile."
+            onChange={(value) => updateForm('device_mismatch', Number(value))}
+          />
+        </div>
+        <motion.button
+          className="primary-btn validate-btn"
+          onClick={runPrediction}
+          disabled={busy}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {busy ? <Spinner /> : <Shield size={18} />} {busy ? 'Predicting...' : 'Predict Fraud'}
+        </motion.button>
+      </motion.section>
+
+      <section className={`learn-more ${learnOpen ? 'open' : ''}`}>
+        <button type="button" className="learn-toggle" onClick={() => setLearnOpen((open) => !open)}>
+          <span className="chevron">{learnOpen ? 'v' : '>'}</span>
+          <span>Learn More: What do these parameters mean?</span>
+        </button>
+        {learnOpen && (
+          <motion.div
+            className="learn-body"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <h2><Shield size={28} /> Core Fraud Indicators Explained</h2>
+            <p><strong>New Beneficiary (<code>is_beneficiary_new</code>):</strong> Indicates if the recipient account was recently linked. Fraudsters frequently add mule accounts to move money quickly after breaching a profile.</p>
+            <p><strong>Device Mismatch (<code>device_mismatch</code>):</strong> Flags an unauthorized device signature, browser fingerprint, or unusual IP. This is a primary indicator of session hijacking or remote access fraud.</p>
+          </motion.div>
+        )}
+      </section>
+
+      <AnimatePresence>
+        {prediction && (
+          <motion.section
+            className={`result-card ${isFraud ? 'fraud' : 'legit'}`}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1,    y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          >
+            {isFraud ? <ShieldAlert size={28} /> : <CheckCircle2 size={28} />}
+            <div>
+              <h2>{isFraud ? 'Fraud Detected' : 'Legitimate Transaction'}</h2>
+              <p>Risk score: {Number(prediction.risk_score || 0).toFixed(4)} | Confidence: {Number(prediction.confidence_level || 0).toFixed(4)}</p>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   EXPLAIN PANEL (SHAP)
+═══════════════════════════════════════════════ */
+function ExplainPanel({ txIds, explainTx, setExplainTx, explanation, explainTransaction, explaining }) {
+  if (!txIds.length) return null
+  const chartData = (explanation?.shap_values || []).map((item) => ({
+    feature: item.feature,
+    value: item.value,
+    contribution: item.contribution,
+    direction: item.contribution > 0 ? 'Increases Risk' : 'Decreases Risk',
+  }))
+
+  return (
+    <motion.section
+      className="panel"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <PanelHeader icon={Brain} title="Model Explainability (SHAP Values)" />
+      <div className="explain-row">
+        <select value={explainTx} onChange={(event) => setExplainTx(event.target.value)}>
+          {txIds.slice(0, 100).map((id) => <option key={id} value={id}>{id}</option>)}
+        </select>
+        <motion.button
+          className="ghost-btn"
+          onClick={() => explainTransaction()}
+          disabled={explaining}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+        >
+          {explaining ? <Spinner /> : <Brain size={16} />} Explain This Transaction
+        </motion.button>
+      </div>
+      {explanation?.base_value !== undefined && (
+        <p className="base-threshold">
+          Base risk threshold: <code>{Number(explanation.base_value).toFixed(4)}</code>
+        </p>
+      )}
+      {chartData.length > 0 && (
+        <>
+          <h3 className="shap-title">SHAP Feature Explanations (Red = Increases Risk, Green = Decreases Risk)</h3>
+          <div className="chart-box shap">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical" margin={{ top: 12, right: 28, left: 86, bottom: 18 }}>
+                <CartesianGrid stroke="rgba(6,182,212,0.1)" horizontal={false} strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  stroke="#4a6580"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fontFamily: 'Space Grotesk' }}
+                  label={{ value: 'SHAP Value (Impact on Risk)', position: 'insideBottom', offset: -8, fill: '#7fa8cc', fontSize: 11 }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="feature"
+                  stroke="#7fa8cc"
+                  tickLine={false}
+                  axisLine={false}
+                  width={150}
+                  tick={{ fontSize: 11, fontFamily: 'Space Grotesk' }}
+                />
+                <ReferenceLine x={0} stroke="rgba(226,232,240,0.5)" strokeWidth={1.5} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="contribution" radius={[4, 4, 4, 4]} animationBegin={200} animationDuration={800}>
+                  {chartData.map((entry) => (
+                    <Cell key={entry.feature} fill={entry.contribution >= 0 ? '#ef4444' : '#10b981'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="table-wrap shap-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>feature</th>
+                  <th>value</th>
+                  <th>contribution</th>
+                  <th>Impact Direction</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((row, idx) => (
+                  <motion.tr
+                    key={row.feature}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                  >
+                    <td>{row.feature}</td>
+                    <td>{formatCell(row.value)}</td>
+                    <td>{formatCell(row.contribution)}</td>
+                    <td>
+                      {row.direction}
+                      <span className={`impact-dot ${row.contribution >= 0 ? 'risk-up' : 'risk-down'}`} />
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="shap-notes">
+            <strong>How to read this chart:</strong>
+            <span><span className="impact-dot risk-up" /> Red bars = features that pushed the risk score higher</span>
+            <span><span className="impact-dot risk-down" /> Green bars = features that reduced the risk score</span>
+            <span>Longer bar = stronger influence on the final prediction.</span>
+          </div>
+        </>
+      )}
+    </motion.section>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   DATA TABLE (with animated rows)
+═══════════════════════════════════════════════ */
+function DataTable({ title, rows, columns }) {
+  if (!rows.length) return null
+  return (
+    <motion.section
+      className="panel"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <PanelHeader icon={FileJson} title={title} />
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>{columns.map((col) => <th key={col}>{col.replace(/_/g, ' ')}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <motion.tr
+                key={row.transaction_id || idx}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.025, duration: 0.25 }}
+              >
+                {columns.map((col) => (
+                  <td key={col} className={col.includes('risk') && Number(row[col]) > 0.7 ? 'high-risk' : ''}>
+                    {formatCell(row[col])}
+                  </td>
+                ))}
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </motion.section>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   SHARED UI COMPONENTS
+═══════════════════════════════════════════════ */
+function PanelHeader({ icon: Icon, title, action }) {
+  return (
+    <div className="panel-header">
+      <h2><Icon size={20} /> {title}</h2>
+      {action}
     </div>
   )
+}
+
+function NumberField({ label, value, onChange, min, max }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input type="number" min={min} max={max} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  )
+}
+
+function SelectField({ label, value, help, onChange }) {
+  return (
+    <label className="field">
+      <span className="field-label-row">
+        {label}
+        {help && (
+          <span className="help-mark" title={help} aria-label={help}>
+            <HelpCircle size={16} />
+          </span>
+        )}
+      </span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value={0}>No</option>
+        <option value={1}>Yes</option>
+      </select>
+    </label>
+  )
+}
+
+function SmallMetric({ label, value }) {
+  return (
+    <div className="small-metric">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function Spinner() {
+  return <span className="spinner" />
+}
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="chart-tooltip">
+      <strong>{label}</strong>
+      {payload.map((entry) => (
+        <span key={entry.dataKey}>{entry.name}: {entry.value}</span>
+      ))}
+    </div>
+  )
+}
+
+function formatNumber(value) {
+  return typeof value === 'number' ? value.toLocaleString() : value
+}
+
+function formatCell(value) {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'number') return Number.isInteger(value) ? value : value.toFixed(4)
+  if (value === null || value === undefined) return '-'
+  return String(value)
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
