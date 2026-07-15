@@ -46,3 +46,10 @@ async def startup_event():
 @app.get("/", tags=["Root"])
 async def root():
     return {"message": "Welcome to the FinSpark PS2 Fraud Detection System API"}
+
+@app.get("/health", tags=["Health"])
+async def health():
+    return {
+        "status": "healthy",
+        "models_loaded": ml_service.models is not None,
+    }
