@@ -363,6 +363,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
@@ -377,6 +378,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text);
+  min-width: 0;
 }
 .panel-header h2 svg {
   padding: 6px;
@@ -1149,4 +1151,3 @@ td, th { font-family: var(--font-sans); }
 .cm-cell--fn { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.22);  }
 .cm-cell--fn .cm-val { color: var(--red); }
 .cm-cell--fn .cm-bar { background: var(--red); }
-

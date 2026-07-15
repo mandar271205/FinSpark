@@ -692,7 +692,19 @@ function RealWorldValidation({
   const template = 'transaction_id,is_beneficiary_new,PSH Flag Cnt,RST Flag Cnt,Fwd Pkt Len Max,Fwd Pkts/s,is_fraud_actual\nsample-1,1,8,3,1460,85,1\n'
   const templateUrl = React.useMemo(() => URL.createObjectURL(new Blob([template], { type: 'text/csv' })), [])
   const rows = validation?.results || []
+  const resultColumns = ['transaction_id', 'is_fraud_actual', 'is_fraud_predicted', 'risk_score', 'confidence']
+  const resultsCsvUrl = React.useMemo(() => {
+    if (!rows.length) return ''
+    return URL.createObjectURL(new Blob([toCsv(rows, resultColumns)], { type: 'text/csv;charset=utf-8' }))
+  }, [rows])
   const correct = rows.filter((row) => row.is_fraud_actual === row.is_fraud_predicted).length
+
+  React.useEffect(() => () => URL.revokeObjectURL(templateUrl), [templateUrl])
+
+  React.useEffect(() => {
+    if (!resultsCsvUrl) return undefined
+    return () => URL.revokeObjectURL(resultsCsvUrl)
+  }, [resultsCsvUrl])
 
   // ── Debug log full API response ──
   React.useEffect(() => {
@@ -857,12 +869,6 @@ function RealWorldValidation({
             </motion.section>
           )}
 
-          {/* Per-row results table */}
-          <DataTable
-            title="Per-Row Results"
-            rows={rows.slice(0, 24)}
-            columns={['transaction_id', 'is_fraud_actual', 'is_fraud_predicted', 'risk_score', 'confidence']}
-          />
           <ExplainPanel
             txIds={rows.map((row) => row.transaction_id)}
             explainTx={explainTx}
@@ -870,6 +876,18 @@ function RealWorldValidation({
             explanation={explanation}
             explainTransaction={explainTransaction}
             explaining={explaining}
+          />
+
+          {/* Per-row results table */}
+          <DataTable
+            title={`Per-Row Results — ${rows.length} rows`}
+            rows={rows}
+            columns={resultColumns}
+            action={resultsCsvUrl && (
+              <a className="ghost-btn download" href={resultsCsvUrl} download="per_row_validation_results.csv">
+                <Download size={16} /> Download Results CSV
+              </a>
+            )}
           />
         </>
       )}
@@ -1084,7 +1102,7 @@ function ExplainPanel({ txIds, explainTx, setExplainTx, explanation, explainTran
 /* ═══════════════════════════════════════════════
    DATA TABLE (with animated rows)
 ═══════════════════════════════════════════════ */
-function DataTable({ title, rows, columns }) {
+function DataTable({ title, rows, columns, action }) {
   if (!rows.length) return null
   return (
     <motion.section
@@ -1093,7 +1111,7 @@ function DataTable({ title, rows, columns }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <PanelHeader icon={FileJson} title={title} />
+      <PanelHeader icon={FileJson} title={title} action={action} />
       <div className="table-wrap">
         <table>
           <thead>
@@ -1105,7 +1123,7 @@ function DataTable({ title, rows, columns }) {
                 key={row.transaction_id || idx}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.025, duration: 0.25 }}
+                transition={{ delay: Math.min(idx * 0.01, 0.18), duration: 0.25 }}
               >
                 {columns.map((col) => (
                   <td key={col} className={col.includes('risk') && Number(row[col]) > 0.7 ? 'high-risk' : ''}>
@@ -1188,6 +1206,19 @@ function ChartTooltip({ active, payload, label }) {
 
 function formatNumber(value) {
   return typeof value === 'number' ? value.toLocaleString() : value
+}
+
+function toCsv(rows, columns) {
+  const escapeCsv = (value) => {
+    if (value === null || value === undefined) return ''
+    const text = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+  }
+
+  return [
+    columns.map(escapeCsv).join(','),
+    ...rows.map((row) => columns.map((col) => escapeCsv(row[col])).join(',')),
+  ].join('\n')
 }
 
 function formatCell(value) {
