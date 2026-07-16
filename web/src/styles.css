@@ -1330,3 +1330,15 @@ td, th { font-family: var(--font-sans); }
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.06);
 }
+
+/* -- Accessibility ----------------------- */
+*:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+}
