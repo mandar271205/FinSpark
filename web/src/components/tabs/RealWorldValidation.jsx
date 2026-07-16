@@ -100,8 +100,8 @@ export function RealWorldValidation({
   const [insightLoading, setInsightLoading] = React.useState(false)
 
   // ── Core 4 metric cards ──
-  const fusedFraudCount = (aiInsight && aiInsight.fraud_count_llm != null && validation)
-    ? Math.round((validation.fraud_detected + aiInsight.fraud_count_llm) / 2)
+  const fusedFraudCount = (aiInsight && aiInsight.fraud_statistics?.fused_verdict != null && validation)
+    ? aiInsight.fraud_statistics.fused_verdict
     : validation?.fraud_detected;
 
   const coreCards = [
