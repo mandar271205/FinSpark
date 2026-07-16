@@ -58,21 +58,6 @@ function WelcomeModal() {
   return null
 }
 
-function FloatingHelp() {
-  return (
-    <ShadcnTooltip>
-      <TooltipTrigger asChild>
-        <button className="fixed bottom-6 right-6 z-40 bg-slate-800 hover:bg-slate-700 text-cyan-400 p-4 rounded-full shadow-lg border border-slate-700 transition-all hover:scale-105 active:scale-95 group">
-          <HelpCircle size={24} className="group-hover:rotate-12 transition-transform" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="left" className="bg-slate-900 border-slate-700 text-white font-medium">
-        Need assistance? Check the contextual tooltips!
-      </TooltipContent>
-    </ShadcnTooltip>
-  )
-}
-
 export function App() {
   const [activeTab, setActiveTab] = React.useState('dashboard')
   const [health, setHealth] = React.useState('checking')
@@ -252,7 +237,6 @@ export function App() {
       <Toaster theme="dark" position="top-right" richColors />
       <div className="app-shell relative">
         <WelcomeModal />
-        <FloatingHelp />
         {/* ── Header ───────────────────────────── */}
         <motion.header
         className="soc-header"

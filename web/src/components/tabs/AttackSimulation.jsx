@@ -52,8 +52,8 @@ export function AttackSimulation({
             exit={{ opacity: 0 }}
             className="space-y-6"
           >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2].map((i) => (
                 <div key={i} className="h-24 bg-slate-800/50 rounded-xl border border-slate-700/30 animate-pulse flex flex-col justify-center px-4">
                   <div className="w-16 h-4 bg-slate-700 rounded mb-2" />
                   <div className="w-24 h-6 bg-slate-700/50 rounded" />
@@ -69,12 +69,10 @@ export function AttackSimulation({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <section className="metric-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <section className="metric-grid grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 ['Total Transactions', rows.length || 100],
                 ['Actual Fraud Injected', actual],
-                ['Detected by Model', flagged],
-                ['Avg Quantum Risk', avgQuantum.toFixed(2)],
               ].map(([label, value], i) => (
                 <motion.div
                   key={label}
@@ -88,12 +86,6 @@ export function AttackSimulation({
               ))}
             </section>
             
-            <DataTable
-              title="Transaction Table"
-              rows={rows.slice(0, 18)}
-              columns={['transaction_id', 'simulated_pattern', 'risk_score', 'quantum_risk_score', 'data_exfil_volume_gb', 'is_fraud_actual', 'is_fraud_predicted']}
-            />
-            
             <ExplainPanel
               txIds={rows.map((row) => row.transaction_id)}
               explainTx={explainTx}
@@ -101,6 +93,12 @@ export function AttackSimulation({
               explanation={explanation}
               explainTransaction={explainTransaction}
               explaining={explaining}
+            />
+            
+            <DataTable
+              title="Transaction Table"
+              rows={rows.slice(0, 18)}
+              columns={['transaction_id', 'simulated_pattern', 'risk_score', 'quantum_risk_score', 'data_exfil_volume_gb', 'is_fraud_actual', 'is_fraud_predicted']}
             />
           </motion.div>
         ) : null}
