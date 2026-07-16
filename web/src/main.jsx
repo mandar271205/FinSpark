@@ -54,7 +54,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // API Utility
-import { callNvidiaGLM } from "@/lib/nvidia"
+import { callNvidiaGLM, callLlamaFast, callLlamaPowerful } from "@/lib/nvidia"
 import './styles.css'
 
 const API_BASE_URL = (
@@ -113,51 +113,80 @@ function WelcomeModal() {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-8 max-w-lg w-full relative overflow-hidden"
+            className="bg-slate-900/90 border border-slate-700/50 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)] p-8 max-w-lg w-full mx-4 relative overflow-hidden"
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
+            exit={{ scale: 0.95, opacity: 0, y: -20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500" />
+            {/* Ambient glows */}
+            <div className="absolute -top-32 -left-32 w-64 h-64 bg-cyan-500/20 rounded-full blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-blue-600/20 rounded-full blur-[80px] pointer-events-none" />
+
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 bg-[length:200%_auto] animate-gradient-x" />
+
             <button
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-cyan-400 transition-colors z-10"
             >
               <X size={20} />
             </button>
-            <div className="mb-6 flex justify-center">
-              <div className="bg-cyan-500/10 p-4 rounded-full text-cyan-400">
-                <Shield size={48} />
+
+            <div className="relative z-10">
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-xl animate-pulse" />
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-4 rounded-2xl shadow-lg relative">
+                    <Sparkles className="text-cyan-400 w-10 h-10" strokeWidth={1.5} />
+                  </div>
+                </div>
               </div>
+
+              <h2 className="text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 text-center mb-3">
+                FinSpark SOC
+              </h2>
+
+              <p className="text-slate-400 text-center mb-8 leading-relaxed text-sm">
+                Next-generation security operations center. Real-time fraud detection powered by a 25-model ML ensemble, quantum-safe cryptography, and a dual-LLM Hybrid AI Engine (Llama 8B + 70B).
+              </p>
+
+              <div className="space-y-4 mb-8 bg-slate-950/50 rounded-xl p-5 border border-slate-800/50">
+                <div className="flex items-start gap-3">
+                  <div className="bg-cyan-500/10 p-2 rounded-lg mt-0.5"><Gauge className="text-cyan-400" size={16} /></div>
+                  <div>
+                    <h4 className="text-slate-200 text-sm font-medium">Live Monitoring</h4>
+                    <p className="text-slate-500 text-xs mt-0.5">Track real-time transaction velocity and anomalies.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-500/10 p-2 rounded-lg mt-0.5"><Zap className="text-blue-400" size={16} /></div>
+                  <div>
+                    <h4 className="text-slate-200 text-sm font-medium">AI Transaction Testing</h4>
+                    <p className="text-slate-500 text-xs mt-0.5">Test payloads and receive instant GLM-5.2 threat analysis.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-indigo-500/10 p-2 rounded-lg mt-0.5"><BadgeCheck className="text-indigo-400" size={16} /></div>
+                  <div>
+                    <h4 className="text-slate-200 text-sm font-medium">Model Validation</h4>
+                    <p className="text-slate-500 text-xs mt-0.5">Upload datasets to validate our fraud detection accuracy.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white h-12 text-base font-medium shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+                onClick={() => setIsOpen(false)}
+              >
+                Enter Dashboard
+              </Button>
             </div>
-            <h2 className="text-2xl font-bold text-white text-center mb-4">Welcome to FinSpark SOC</h2>
-            <p className="text-slate-300 text-center mb-6 leading-relaxed">
-              Experience the next generation of real-time fraud detection powered by ML ensembles, quantum-safe cryptography, and AI-driven insights from NVIDIA GLM-5.2.
-            </p>
-            <div className="space-y-3 mb-8">
-              <div className="flex items-center gap-3 text-slate-300">
-                <Gauge className="text-cyan-400" size={18} /> Monitor live transactions
-              </div>
-              <div className="flex items-center gap-3 text-slate-300">
-                <Zap className="text-cyan-400" size={18} /> Test transactions in real-time
-              </div>
-              <div className="flex items-center gap-3 text-slate-300">
-                <BadgeCheck className="text-cyan-400" size={18} /> Validate AI models against datasets
-              </div>
-            </div>
-            <Button
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white h-12 text-lg"
-              onClick={() => setIsOpen(false)}
-            >
-              Explore Dashboard
-            </Button>
           </motion.div>
         </motion.div>
       )}
@@ -290,8 +319,10 @@ function App() {
       setPrediction(data)
       setExplainTx(data.transaction_id)
       refreshMetrics()
+      return data  // ← return for fusion engine
     } catch (err) {
       setError(err.message)
+      return null
     } finally {
       setBusy('')
     }
@@ -824,12 +855,17 @@ function RealWorldValidation({
     if (validation.confusion_matrix)        console.log('🔲 Confusion matrix:', validation.confusion_matrix)
   }, [validation])
 
+  const [aiInsight, setAiInsight]       = React.useState(null)
+  const [insightLoading, setInsightLoading] = React.useState(false)
+
   // ── Core 4 metric cards ──
+  const fusedFraudCount = (aiInsight && aiInsight.fraud_count_llm != null && validation)
+    ? Math.round((validation.fraud_detected + aiInsight.fraud_count_llm) / 2)
+    : validation?.fraud_detected;
+
   const coreCards = [
     { label: 'Total Processed',     value: validation?.total_processed, icon: Globe2,       accent: 'cyan',   suffix: ''  },
-    { label: 'Fraud Detected',      value: validation?.fraud_detected,  icon: ShieldAlert,  accent: 'red',    suffix: ''  },
-    { label: 'Model Accuracy',      value: validation?.accuracy != null ? parseFloat((validation.accuracy * 100).toFixed(1)) : null, icon: BadgeCheck, accent: 'green', suffix: '%' },
-    { label: 'Correct Predictions', value: correct,                     icon: CheckCircle2, accent: 'violet', suffix: ''  },
+    { label: 'Fraud Detected',      value: fusedFraudCount,             icon: ShieldAlert,  accent: 'red',    suffix: ''  },
   ]
 
   // ── Advanced metrics (conditional) ──
@@ -841,27 +877,47 @@ function RealWorldValidation({
     { label: 'F1-Score',  value: validation.f1_score  != null ? parseFloat((validation.f1_score  * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.f1_score),  icon: Gauge },
   ] : []
 
-  const [aiInsight, setAiInsight] = React.useState(null)
-  const [insightLoading, setInsightLoading] = React.useState(false)
-
-  const handleGenerateInsight = async () => {
+  // ── Unified AI Insight: ML count + LLM analyzes actual CSV rows ──
+  const handleAiInsight = async () => {
     if (!validation) return
     setInsightLoading(true)
     setAiInsight(null)
     try {
-      const metricsText = `Accuracy: ${validation.accuracy || 'N/A'}\nTotal Processed: ${validation.total_processed}\nFraud Detected: ${validation.fraud_detected}\nPrecision: ${validation.precision || 'N/A'}\nRecall: ${validation.recall || 'N/A'}`
+      const fraudPct = validation.total_processed > 0
+        ? ((validation.fraud_detected / validation.total_processed) * 100).toFixed(1)
+        : 'N/A'
+
+      // Build a simplified array of ALL actual CSV rows for LLM to analyze
+      const allRows = (validation.results || []).map(r => ({
+        id:            r.transaction_id,
+        new_bene:      r.is_beneficiary_new,
+        is_fraud:      r.is_fraud_actual,
+        risk_score:    r.risk_score != null ? (r.risk_score * 100).toFixed(0) + '%' : 'N/A',
+      }))
+
       const messages = [
-        { role: 'system', content: 'You are a Chief Information Security Officer (CISO). Summarize the following fraud detection metrics in a concise, business-friendly paragraph. Focus on the model\'s effectiveness and any areas of concern. Return plain text.' },
-        { role: 'user', content: `Here are the latest validation metrics:\n${metricsText}`}
+        {
+          role: 'system',
+          content: 'You are a senior financial fraud analyst. You have received ACTUAL transaction rows from a CSV dataset processed by an ML fraud detection system. Analyze the data and respond ONLY in valid JSON: { "dataset_summary": "2 sentences: what kind of transactions are in this CSV, what does the data represent", "fraud_count_llm": number (your estimate of actual fraudulent transactions based on patterns), "fraud_reason": "2 sentences: why are there so many or few fraud cases in this dataset based on the actual data patterns", "transaction_patterns": ["pattern1", "pattern2", "pattern3"], "risk_factors": ["risk factor from actual data 1", "risk factor 2"], "fused_verdict": "1 sentence combining ML count and your analysis" }'
+        },
+        {
+          role: 'user',
+          content: `ML System Report:
+- Total transactions processed: ${validation.total_processed}
+- Fraud detected by ML model: ${validation.fraud_detected} (${fraudPct}%)
+- Model accuracy: ${validation.accuracy != null ? (validation.accuracy * 100).toFixed(1) + '%' : 'N/A'}
+
+Actual CSV transaction rows (ALL ${allRows.length} rows):
+${JSON.stringify(allRows, null, 2)}
+
+Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What patterns explain this? Estimate your own fraud count based on the data.`
+        }
       ]
-      const res = await callNvidiaGLM(messages)
-      // the response might be a json if the previous prompt was json, but here we ask for text.
-      // wait, callNvidiaGLM parses JSON if possible. If not, it returns the raw content string? 
-      // Let's just stringify if it's an object.
-      setAiInsight(typeof res === 'string' ? res : (res?.reason || res?.content || JSON.stringify(res)))
+      const res = await callLlamaFast(messages)
+      setAiInsight(res)
     } catch (err) {
       console.error('AI Insight error:', err)
-      setAiInsight('Failed to generate AI insights at this time.')
+      setAiInsight({ error: true })
     } finally {
       setInsightLoading(false)
     }
@@ -877,38 +933,33 @@ function RealWorldValidation({
       </motion.section>
 
       <motion.section
+        className="panel"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <Card className="bg-slate-900 border-slate-800 text-white mb-6">
-          <CardContent className="pt-6 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-700 rounded-lg m-4 hover:border-cyan-500/50 transition-colors cursor-pointer group relative">
-            <input
-              type="file"
-              accept=".csv,.json,.xlsx,.xls"
-              onChange={(event) => handleFile(event.target.files?.[0])}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            <UploadCloud size={48} className="text-slate-500 group-hover:text-cyan-400 mb-4 transition-colors" />
-            <div className="text-center space-y-2">
-              <p className="text-lg font-medium text-slate-200">
-                {file ? file.name : 'Drag and drop file here'}
-              </p>
-              <p className="text-sm text-slate-500">Limit 200MB per file - CSV, JSON, XLSX, XLS</p>
-              {!file && <span className="inline-block mt-2 text-cyan-400 text-sm hover:underline">Browse files</span>}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white h-12 text-lg"
-              onClick={validateUpload}
-              disabled={!file || busy}
-            >
-              {busy ? <RefreshCw className="animate-spin mr-2" size={20} /> : <FileJson className="mr-2" size={20} />}
-              {busy ? 'Validating...' : 'Test CSV / Run Test'}
-            </Button>
-          </CardFooter>
-        </Card>
+        <label className="dropzone">
+          <UploadCloud size={42} />
+          <span className="dropzone-copy">
+            <strong>{file ? file.name : 'Drag and drop file here'}</strong>
+            <small>Limit 200MB per file - CSV, JSON, XLSX, XLS</small>
+          </span>
+          <span className="browse-chip">Browse files</span>
+          <input
+            type="file"
+            accept=".csv,.json,.xlsx,.xls"
+            onChange={(event) => handleFile(event.target.files?.[0])}
+          />
+        </label>
+        <motion.button
+          className="primary-btn validate-btn"
+          onClick={validateUpload}
+          disabled={!file || busy}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {busy ? <Spinner /> : <FileJson size={18} />} {busy ? 'Validating...' : 'Validate Model Against Upload'}
+        </motion.button>
       </motion.section>
 
       {/* ── Loading skeleton ── */}
@@ -989,12 +1040,7 @@ function RealWorldValidation({
                 ))}
               </section>
             </>
-          ) : (
-            <motion.div className="val-no-advanced" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-              <HelpCircle size={14} />
-              Advanced metrics (Precision / Recall / F1) not in this API response — see console for full structure.
-            </motion.div>
-          )}
+          ) : null}
 
           {/* Confusion matrix (conditional) */}
           {hasConfusion && (
@@ -1009,43 +1055,98 @@ function RealWorldValidation({
             </motion.section>
           )}
 
-          {/* AI Performance Insight Section */}
+          {/* ══ Single AI Insight Panel (ML + LLM Fused) ══ */}
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.4 }}
             className="mt-8"
           >
-            <Card className="bg-slate-900 border-slate-800 border-t-cyan-500/50 text-white relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-50" />
+            <Card className="bg-slate-900 border-slate-800 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-violet-500 to-indigo-500 opacity-70" />
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-semibold flex items-center gap-2 text-cyan-400">
-                      <Bot size={20} /> AI Performance Insight
+                      <Sparkles size={20} /> AI Insight
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1">Get an executive summary of the model's performance on this dataset.</p>
+                    <p className="text-slate-400 text-sm mt-1">What is in your dataset? Why are there so many or few fraud cases?</p>
                   </div>
-                  <Button 
-                    onClick={handleGenerateInsight} 
+                  <Button
+                    onClick={handleAiInsight}
                     disabled={insightLoading}
                     variant="outline"
                     className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
                   >
                     {insightLoading ? <RefreshCw className="animate-spin mr-2" size={16} /> : <Sparkles className="mr-2" size={16} />}
-                    Generate Insight
+                    Generate AI Insight
                   </Button>
                 </div>
 
-                {aiInsight && (
-                  <motion.div 
+                {aiInsight && !aiInsight.error && (
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-6 pt-4 border-t border-slate-800"
+                    className="mt-6 pt-5 border-t border-slate-800/60 space-y-5"
                   >
-                    <div className="bg-slate-800/50 p-4 rounded-lg text-slate-300 leading-relaxed text-sm">
-                      {aiInsight}
+                    {/* Dataset summary */}
+                    {aiInsight.dataset_summary && (
+                      <div className="relative bg-gradient-to-br from-slate-800/70 to-slate-900/70 p-5 rounded-2xl text-slate-200 leading-relaxed text-sm border border-slate-700/50 shadow-lg backdrop-blur-sm">
+                        <div className="text-[11px] font-bold text-cyan-400/80 uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><Brain size={14} /> What's in this dataset</div>
+                        <p className="opacity-90">{aiInsight.dataset_summary}</p>
+                      </div>
+                    )}
+
+                    {/* Fraud reason */}
+                    {aiInsight.fraud_reason && (
+                      <div className="relative bg-gradient-to-br from-rose-950/40 to-slate-900/60 border border-rose-800/30 p-5 rounded-2xl text-slate-200 text-sm leading-relaxed shadow-lg backdrop-blur-sm">
+                        <div className="text-[11px] font-bold text-rose-400/80 uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><AlertTriangle size={14} /> Why this fraud rate?</div>
+                        <p className="opacity-90">{aiInsight.fraud_reason}</p>
+                      </div>
+                    )}
+
+                    {/* Patterns + Risk factors */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {aiInsight.transaction_patterns?.length > 0 && (
+                        <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/60 border border-indigo-800/30 rounded-2xl p-5 shadow-lg backdrop-blur-sm">
+                          <div className="text-indigo-400 font-bold text-[11px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><Activity size={14} /> Transaction Patterns</div>
+                          <ul className="space-y-2">
+                            {aiInsight.transaction_patterns.map((s, i) => (
+                              <li key={i} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
+                                <span className="text-indigo-500 mt-0.5"><CheckCircle2 size={12} /></span>
+                                <span className="opacity-90">{s}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiInsight.risk_factors?.length > 0 && (
+                        <div className="bg-gradient-to-br from-amber-950/40 to-slate-900/60 border border-amber-800/30 rounded-2xl p-5 shadow-lg backdrop-blur-sm">
+                          <div className="text-amber-400 font-bold text-[11px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><ShieldAlert size={14} /> Risk Factors Found</div>
+                          <ul className="space-y-2">
+                            {aiInsight.risk_factors.map((s, i) => (
+                              <li key={i} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
+                                <span className="text-amber-500 mt-0.5"><AlertTriangle size={12} /></span>
+                                <span className="opacity-90">{s}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Fused verdict sentence */}
+                    {aiInsight.fused_verdict && (
+                      <div className="relative bg-gradient-to-r from-cyan-900/30 via-slate-800/50 to-indigo-900/30 border-l-4 border-l-cyan-500 border-y border-r border-slate-700/50 p-5 rounded-r-2xl text-cyan-100 text-sm italic leading-relaxed shadow-lg backdrop-blur-sm">
+                        “{aiInsight.fused_verdict}”
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {aiInsight?.error && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-amber-400 text-sm flex items-center gap-2">
+                    <AlertTriangle size={16} /> Could not generate insight at this time.
                   </motion.div>
                 )}
               </CardContent>
@@ -1078,31 +1179,180 @@ function RealWorldValidation({
   )
 }
 
+function FinalVerdictCard({ finalVerdict, llmReason }) {
+  if (!finalVerdict) return null
+  const isFraud = finalVerdict.isFraud
+  const conf = Math.round((finalVerdict.confidence || 0) * 100)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      className={`verdict-card ${isFraud ? 'verdict-card--fraud' : 'verdict-card--legit'}`}
+    >
+      <div className="verdict-card-icon">{isFraud ? '🚨' : '✅'}</div>
+      <div className={`verdict-card-label ${isFraud ? 'text-red-400' : 'text-green-400'}`}>
+        {isFraud ? 'FRAUD DETECTED' : 'LEGITIMATE TRANSACTION'}
+      </div>
+      <div className="verdict-card-conf">{conf}% confidence</div>
+      {llmReason && (
+        <div className="verdict-card-reason">&ldquo;{llmReason}&rdquo;</div>
+      )}
+    </motion.div>
+  )
+}
+
+function VerdictBadge({ type }) {
+  const styles = {
+    consensus:  'bg-green-500/10 text-green-400 border-green-500/40',
+    judge:      'bg-amber-500/10 text-amber-400 border-amber-500/40',
+    fallback:   'bg-slate-500/10 text-slate-400 border-slate-500/40',
+    fraud:      'bg-red-500/10 text-red-400 border-red-500/50',
+    legit:      'bg-green-500/10 text-green-400 border-green-500/50',
+  }
+  const labels = {
+    consensus: '✅ Consensus Reached',
+    judge:     '👨‍⚖️ Judge Override',
+    fallback:  '⚠️ Fallback Mode',
+    fraud:     '🚨 FRAUD',
+    legit:     '✅ LEGITIMATE',
+  }
+  return (
+    <Badge variant="outline" className={`text-xs font-semibold px-3 py-1 ${styles[type]}`}>
+      {labels[type]}
+    </Badge>
+  )
+}
+
+
+function HybridVerdictCards({ mlResult, llmResult, finalVerdict, rawJson }) {
+  const [showRaw, setShowRaw] = React.useState(false)
+  if (!mlResult && !llmResult) return null
+
+  const mlIsFraud = mlResult?.is_fraud
+  const llmIsFraud = llmResult?.fraud !== undefined ? llmResult.fraud : (llmResult?.verdict === 'Fraud')
+  const llmConf = Math.round((llmResult?.confidence || 0) * 100)
+  const mlConf  = Math.round((mlResult?.risk_score || 0) * 100)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1 }}
+      className="space-y-4"
+    >
+      {/* 3-card grid */}
+      <div className="hybrid-cards-grid">
+        {/* ML Card */}
+        <div className={`hybrid-card ${mlIsFraud ? 'hybrid-card--fraud' : 'hybrid-card--legit'}`}>
+          <div className="hybrid-card-icon">🧠</div>
+          <div className="hybrid-card-title">ML Model Score</div>
+          <VerdictBadge type={mlIsFraud ? 'fraud' : 'legit'} />
+          <div className="hybrid-card-conf">{mlConf}% confidence</div>
+          <div className="hybrid-card-sub">25-model ensemble</div>
+        </div>
+
+        {/* LLM Card */}
+        <div className={`hybrid-card ${llmIsFraud ? 'hybrid-card--fraud' : 'hybrid-card--legit'}`}>
+          <div className="hybrid-card-icon">🤖</div>
+          <div className="hybrid-card-title">AI Reasoner (Llama 8B)</div>
+          <VerdictBadge type={llmIsFraud ? 'fraud' : 'legit'} />
+          <div className="hybrid-card-conf">{llmConf}% confidence</div>
+          {llmResult?.reason && <div className="hybrid-card-reason">&ldquo;{llmResult.reason}&rdquo;</div>}
+        </div>
+
+        {/* Final Verdict Card */}
+        <div className={`hybrid-card hybrid-card--final ${finalVerdict?.isFraud ? 'hybrid-card--fraud' : 'hybrid-card--legit'}`}>
+          <div className="hybrid-card-icon">🏆</div>
+          <div className="hybrid-card-title">Final Verdict</div>
+          <VerdictBadge type={finalVerdict?.isFraud ? 'fraud' : 'legit'} />
+          <div className="hybrid-card-conf">{Math.round((finalVerdict?.confidence || 0) * 100)}% confidence</div>
+          <div className="mt-2">
+            <VerdictBadge type={finalVerdict?.method === 'judge' ? 'judge' : 'consensus'} />
+          </div>
+          {finalVerdict?.judgeReason && (
+            <div className="hybrid-card-reason mt-1 text-amber-300">{finalVerdict.judgeReason}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Raw JSON toggle */}
+      <div className="text-right">
+        <button
+          className="ghost-btn text-xs"
+          onClick={() => setShowRaw(v => !v)}
+        >
+          <FileJson size={14} /> {showRaw ? 'Hide' : 'Show'} Raw JSON
+        </button>
+      </div>
+      <AnimatePresence>
+        {showRaw && (
+          <motion.pre
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="code-block text-xs overflow-auto max-h-60"
+          >
+            {JSON.stringify(rawJson, null, 2)}
+          </motion.pre>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 /* ═══════════════════════════════════════════════
-   LIVE API TESTING
+   LIVE API TESTING (Transaction Testing)
 ═══════════════════════════════════════════════ */
 function LiveApiTesting({ form, updateForm, prediction, busy, runPrediction }) {
-  const isFraud = prediction?.is_fraud
-  const [insight, setInsight] = React.useState(null)
-  const [insightLoading, setInsightLoading] = React.useState(false)
+  const [llmResult,     setLlmResult]     = React.useState(null)
+  const [finalVerdict,  setFinalVerdict]  = React.useState(null)
+  const [fusionLoading, setFusionLoading] = React.useState(false)
 
   const handlePredict = async () => {
-    runPrediction()
-    setInsightLoading(true)
-    setInsight(null)
-    try {
-      const messages = [
-        { role: 'system', content: 'You are a senior fraud detection analyst. Analyze the transaction details and determine if it is fraudulent. Respond ONLY in valid JSON format: { "fraud": boolean, "confidence": number, "reason": "short explanation" }.' },
-        { role: 'user', content: `Transaction: Amount=${form.amount}, Velocity=${form.velocity_24h}, TimeSinceLast=${form.time_since_last_txn}, NewBeneficiary=${form.is_beneficiary_new}, DeviceMismatch=${form.device_mismatch}` }
-      ]
-      const aiResponse = await callNvidiaGLM(messages)
-      setInsight(aiResponse)
-    } catch (err) {
-      console.error('AI Insight Error:', err)
-      setInsight({ error: true, reason: 'AI insights temporarily unavailable (Fallback Mode)' })
-    } finally {
-      setInsightLoading(false)
+    setLlmResult(null)
+    setFinalVerdict(null)
+    setFusionLoading(true)
+
+    const txContext = `Amount=${form.amount}, Velocity24h=${form.velocity_24h}, HourOfDay=${form.hour_of_transaction}, MinsSinceLast=${form.time_since_last_txn}, NewBeneficiary=${form.is_beneficiary_new}, DeviceMismatch=${form.device_mismatch}`
+
+    // Parallel: ML backend + Llama 8B
+    const [mlData, llmData] = await Promise.allSettled([
+      runPrediction(),
+      callLlamaFast([
+        { role: 'system', content: 'You are a fraud detection AI. Respond ONLY in valid JSON: { "fraud": boolean, "confidence": number between 0 and 1, "reason": "one sentence explanation max 15 words" }' },
+        { role: 'user',   content: `Transaction: ${txContext}` },
+      ]),
+    ])
+
+    const ml  = mlData.status  === 'fulfilled' ? mlData.value  : null
+    const llm = llmData.status === 'fulfilled' ? llmData.value : null
+    setLlmResult(llm)
+
+    // Fusion: pick best answer (highest confidence)
+    const mlIsFraud  = !!ml?.is_fraud
+    const llmIsFraud = llm ? (llm.fraud !== undefined ? !!llm.fraud : false) : mlIsFraud
+    const mlConf     = ml?.risk_score  || 0
+    const llmConf    = llm?.confidence || 0
+
+    let isFraud, confidence
+    if (!llm) {
+      isFraud    = mlIsFraud
+      confidence = mlConf
+    } else if (mlIsFraud === llmIsFraud) {
+      // Both agree — average confidence
+      isFraud    = mlIsFraud
+      confidence = (mlConf + llmConf) / 2
+    } else {
+      // Disagree — use highest confidence model's verdict
+      const useML = mlConf >= llmConf
+      isFraud    = useML ? mlIsFraud : llmIsFraud
+      confidence = Math.max(mlConf, llmConf)
     }
+
+    setFinalVerdict({ isFraud, confidence })
+    setFusionLoading(false)
   }
 
   return (
@@ -1111,133 +1361,51 @@ function LiveApiTesting({ form, updateForm, prediction, busy, runPrediction }) {
         <h1>Enterprise Real-Time Transaction Testing</h1>
       </motion.section>
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+      <motion.section
+        className="panel"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <Card className="bg-slate-900 border-slate-800 text-white">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Terminal size={20} className="text-cyan-400" /> Transaction Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm text-slate-400">Transaction Amount</label>
-                <Input type="number" className="bg-slate-800 border-slate-700" value={form.amount} onChange={(e) => updateForm('amount', Number(e.target.value))} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm text-slate-400">Velocity in 24h</label>
-                <Input type="number" className="bg-slate-800 border-slate-700" value={form.velocity_24h} onChange={(e) => updateForm('velocity_24h', Number(e.target.value))} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm text-slate-400">Hour of Day</label>
-                <Input type="number" min={0} max={23} className="bg-slate-800 border-slate-700" value={form.hour_of_transaction} onChange={(e) => updateForm('hour_of_transaction', Number(e.target.value))} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm text-slate-400">Mins Since Last Txn</label>
-                <Input type="number" className="bg-slate-800 border-slate-700" value={form.time_since_last_txn} onChange={(e) => updateForm('time_since_last_txn', Number(e.target.value))} />
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm text-slate-400">New Beneficiary?</label>
-                  <ShadcnTooltip>
-                    <TooltipTrigger><Info size={14} className="text-slate-500" /></TooltipTrigger>
-                    <TooltipContent>1 means the receiver account is newly added. Risky in phishing cash-outs.</TooltipContent>
-                  </ShadcnTooltip>
-                </div>
-                <Select value={String(form.is_beneficiary_new)} onValueChange={(v) => updateForm('is_beneficiary_new', Number(v))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="1">Yes (1)</SelectItem>
-                    <SelectItem value="0">No (0)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm text-slate-400">Device Mismatch?</label>
-                  <ShadcnTooltip>
-                    <TooltipTrigger><Info size={14} className="text-slate-500" /></TooltipTrigger>
-                    <TooltipContent>1 means device, browser, or IP differs from the usual customer profile.</TooltipContent>
-                  </ShadcnTooltip>
-                </div>
-                <Select value={String(form.device_mismatch)} onValueChange={(v) => updateForm('device_mismatch', Number(v))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="1">Yes (1)</SelectItem>
-                    <SelectItem value="0">No (0)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white"
-              onClick={handlePredict}
-              disabled={busy || insightLoading}
-            >
-              {(busy || insightLoading) ? <RefreshCw className="animate-spin mr-2" size={18} /> : <Shield className="mr-2" size={18} />}
-              {(busy || insightLoading) ? 'Analyzing with AI...' : 'Test CSV / Run Test'}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <div className="space-y-6">
-          <AnimatePresence mode="wait">
-            {prediction && (
-              <motion.div
-                key="prediction"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-              >
-                <Card className={`border ${isFraud ? 'border-red-500/50 bg-red-950/20' : 'border-green-500/50 bg-green-950/20'} text-white`}>
-                  <CardContent className="pt-6 text-center space-y-4">
-                    <div className="flex justify-center">
-                      <Badge variant="outline" className={`text-lg py-1 px-4 ${isFraud ? 'bg-red-500/10 text-red-400 border-red-500/50' : 'bg-green-500/10 text-green-400 border-green-500/50'}`}>
-                        {isFraud ? 'Fraud Detected' : 'Legitimate Transaction'}
-                      </Badge>
-                    </div>
-                    
-                    {insight && !insight.error && (
-                      <div className="bg-slate-900/50 rounded-lg p-4 text-left border border-slate-700/50 mt-4">
-                        <div className="flex items-center gap-2 mb-2 text-cyan-400 font-semibold">
-                          <Bot size={18} /> AI Insight (GLM-5.2)
-                        </div>
-                        <p className="text-slate-300 text-sm leading-relaxed">{insight.reason}</p>
-                        <div className="mt-3 text-xs text-slate-500 flex justify-between">
-                          <span>AI Confidence: {Math.round(insight.confidence * 100)}%</span>
-                          <span>Model Score: {Number(prediction.risk_score || 0).toFixed(4)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {insight?.error && (
-                      <div className="bg-slate-900/50 rounded-lg p-4 text-left border border-slate-700/50 mt-4 text-amber-400 text-sm">
-                        <AlertTriangle className="inline mr-2" size={16} />
-                        {insight.reason}
-                        <div className="mt-2 text-xs text-slate-500">
-                          Fallback score: {Number(prediction.risk_score || 0).toFixed(4)}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="form-grid">
+          <NumberField label="Transaction Amount"   value={form.amount}               onChange={(value) => updateForm('amount', value)} />
+          <NumberField label="Velocity in 24h"      value={form.velocity_24h}          onChange={(value) => updateForm('velocity_24h', value)} />
+          <NumberField label="Hour of Day"          value={form.hour_of_transaction}   min={0} max={23} onChange={(value) => updateForm('hour_of_transaction', value)} />
+          <NumberField label="Mins Since Last Txn"  value={form.time_since_last_txn}   onChange={(value) => updateForm('time_since_last_txn', value)} />
+          <SelectField
+            label="New Beneficiary?"
+            value={form.is_beneficiary_new}
+            help="1 means the receiver account is newly added. This is risky in phishing cash-outs."
+            onChange={(value) => updateForm('is_beneficiary_new', Number(value))}
+          />
+          <SelectField
+            label="Device Mismatch?"
+            value={form.device_mismatch}
+            help="1 means device, browser, or IP differs from the usual customer profile."
+            onChange={(value) => updateForm('device_mismatch', Number(value))}
+          />
         </div>
-      </motion.div>
+        <motion.button
+          className="primary-btn validate-btn"
+          onClick={handlePredict}
+          disabled={busy || fusionLoading}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {(busy || fusionLoading) ? <Spinner /> : <Shield size={18} />}
+          {(busy || fusionLoading) ? 'Predicting…' : 'Predict Fraud (AI + ML)'}
+        </motion.button>
+      </motion.section>
+
+      {/* Clean single final answer card */}
+      <AnimatePresence>
+        {finalVerdict && (
+          <FinalVerdictCard
+            finalVerdict={finalVerdict}
+            llmReason={llmResult?.reason || null}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
