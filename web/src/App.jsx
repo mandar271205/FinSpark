@@ -7,7 +7,6 @@ import {
   Gauge,
   HelpCircle,
   Lock,
-  Shield,
   Zap,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -244,7 +243,10 @@ export function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       >
-        <div className="soc-title"><Shield size={30} /> FinSpark SOC Dashboard</div>
+        <div className="soc-title">
+          <img src="/finspark-logo.png" alt="" aria-hidden="true" className="soc-logo" />
+          <span>FinSpark SOC Dashboard</span>
+        </div>
         <div className="soc-status">
           <span className={`status-dot ${health}`} />
           {health === 'online' ? 'System Online' : health === 'offline' ? 'System Offline' : 'Checking System'}
