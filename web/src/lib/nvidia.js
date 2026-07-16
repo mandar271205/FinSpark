@@ -1,22 +1,28 @@
-const NVIDIA_BASE = "/api/nvidia/v1"
-
 export const LLM_MODELS = {
   FAST: "meta/llama-3.1-8b-instruct",       // ~300ms — real-time fraud co-pilot
   POWERFUL: "meta/llama-3.3-70b-instruct",   // ~2s — tie-breaker judge & summaries
+}
+
+function parseJsonContent(content) {
+  if (!content) return {}
+  const cleaned = String(content)
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim()
+  return JSON.parse(cleaned)
 }
 
 async function _call(messages, modelKey, timeout = 8000) {
   const controller = new AbortController()
   const timerId = setTimeout(() => controller.abort(), timeout)
   try {
-    const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
+    const res = await fetch("/api/nvidia", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${import.meta.env.VITE_NVIDIA_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: LLM_MODELS[modelKey],
+        model: LLM_MODELS[modelKey] || LLM_MODELS.FAST,
         messages,
         temperature: 0.2,
         max_tokens: 400,
@@ -31,7 +37,7 @@ async function _call(messages, modelKey, timeout = 8000) {
     }
     const data = await res.json()
     const content = data.choices[0].message?.content || data.choices[0].delta?.content || "{}"
-    return JSON.parse(content)
+    return parseJsonContent(content)
   } catch (err) {
     clearTimeout(timerId)
     throw err

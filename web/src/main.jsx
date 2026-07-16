@@ -36,9 +36,6 @@ import {
   TrendingUp,
   UploadCloud,
   Zap,
-  Bot,
-  Info,
-  X,
   Sparkles,
 } from 'lucide-react'
 
@@ -54,7 +51,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // API Utility
-import { callNvidiaGLM, callLlamaFast, callLlamaPowerful } from "@/lib/nvidia"
+import { callLlamaFast } from "@/lib/nvidia"
 import './styles.css'
 
 const API_BASE_URL = (
@@ -99,99 +96,7 @@ const fadeUp = {
 }
 
 function WelcomeModal() {
-  const [isOpen, setIsOpen] = React.useState(false)
-
-  React.useEffect(() => {
-    const hasVisited = localStorage.getItem('finspark_visited')
-    if (!hasVisited) {
-      setIsOpen(true)
-      localStorage.setItem('finspark_visited', 'true')
-    }
-  }, [])
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="bg-slate-900/90 border border-slate-700/50 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)] p-8 max-w-lg w-full mx-4 relative overflow-hidden"
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: -20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          >
-            {/* Ambient glows */}
-            <div className="absolute -top-32 -left-32 w-64 h-64 bg-cyan-500/20 rounded-full blur-[80px] pointer-events-none" />
-            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-blue-600/20 rounded-full blur-[80px] pointer-events-none" />
-
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 bg-[length:200%_auto] animate-gradient-x" />
-
-            <button
-              onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-cyan-400 transition-colors z-10"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="relative z-10">
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-xl animate-pulse" />
-                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-4 rounded-2xl shadow-lg relative">
-                    <Sparkles className="text-cyan-400 w-10 h-10" strokeWidth={1.5} />
-                  </div>
-                </div>
-              </div>
-
-              <h2 className="text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 text-center mb-3">
-                FinSpark SOC
-              </h2>
-
-              <p className="text-slate-400 text-center mb-8 leading-relaxed text-sm">
-                Next-generation security operations center. Real-time fraud detection powered by a 25-model ML ensemble, quantum-safe cryptography, and a dual-LLM Hybrid AI Engine (Llama 8B + 70B).
-              </p>
-
-              <div className="space-y-4 mb-8 bg-slate-950/50 rounded-xl p-5 border border-slate-800/50">
-                <div className="flex items-start gap-3">
-                  <div className="bg-cyan-500/10 p-2 rounded-lg mt-0.5"><Gauge className="text-cyan-400" size={16} /></div>
-                  <div>
-                    <h4 className="text-slate-200 text-sm font-medium">Live Monitoring</h4>
-                    <p className="text-slate-500 text-xs mt-0.5">Track real-time transaction velocity and anomalies.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-500/10 p-2 rounded-lg mt-0.5"><Zap className="text-blue-400" size={16} /></div>
-                  <div>
-                    <h4 className="text-slate-200 text-sm font-medium">AI Transaction Testing</h4>
-                    <p className="text-slate-500 text-xs mt-0.5">Test payloads and receive instant GLM-5.2 threat analysis.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-indigo-500/10 p-2 rounded-lg mt-0.5"><BadgeCheck className="text-indigo-400" size={16} /></div>
-                  <div>
-                    <h4 className="text-slate-200 text-sm font-medium">Model Validation</h4>
-                    <p className="text-slate-500 text-xs mt-0.5">Upload datasets to validate our fraud detection accuracy.</p>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white h-12 text-base font-medium shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
-                onClick={() => setIsOpen(false)}
-              >
-                Enter Dashboard
-              </Button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
+  return null
 }
 
 function FloatingHelp() {
@@ -877,6 +782,34 @@ function RealWorldValidation({
     { label: 'F1-Score',  value: validation.f1_score  != null ? parseFloat((validation.f1_score  * 100).toFixed(1)) : null, suffix: '%', accent: getAccentForScore(validation.f1_score),  icon: Gauge },
   ] : []
 
+  const buildFallbackInsight = (errorMessage = '') => {
+    const total = validation?.total_processed || 0
+    const fraudCount = validation?.fraud_detected || 0
+    const fraudPct = total > 0 ? ((fraudCount / total) * 100).toFixed(1) : '0.0'
+    const highRiskRows = (validation?.results || []).filter(row => Number(row.risk_score || 0) >= 0.7).length
+    const newBeneficiaryRows = (validation?.results || []).filter(row => row.is_beneficiary_new === true || row.is_beneficiary_new === 'true').length
+
+    return {
+      fallback: true,
+      dataset_summary: `Processed ${total} uploaded transactions and detected ${fraudCount} fraud cases (${fraudPct}%). This summary is generated from the ML validation result while the LLM insight service is unavailable.`,
+      fraud_count_llm: fraudCount,
+      fraud_reason: highRiskRows > 0
+        ? `${highRiskRows} transactions crossed a high-risk score threshold, which is the strongest signal in this upload. New beneficiary activity appears in ${newBeneficiaryRows} rows and can increase fraud risk when combined with other signals.`
+        : `The model did not find many high-risk rows in this upload. Fraud volume is mainly explained by the backend model's transaction-level risk scoring.`,
+      transaction_patterns: [
+        `${total} transactions validated from the uploaded file`,
+        `${fraudCount} transactions marked suspicious by the ML model`,
+        `${newBeneficiaryRows} rows involve new-beneficiary activity`,
+      ],
+      risk_factors: [
+        'High model risk score',
+        'New beneficiary or unusual transfer context',
+      ],
+      fused_verdict: `ML validation currently reports ${fraudCount} suspicious transactions out of ${total}.`,
+      error_detail: errorMessage,
+    }
+  }
+
   // ── Unified AI Insight: ML count + LLM analyzes actual CSV rows ──
   const handleAiInsight = async () => {
     if (!validation) return
@@ -887,8 +820,7 @@ function RealWorldValidation({
         ? ((validation.fraud_detected / validation.total_processed) * 100).toFixed(1)
         : 'N/A'
 
-      // Build a simplified array of ALL actual CSV rows for LLM to analyze
-      const allRows = (validation.results || []).map(r => ({
+      const allRows = (validation.results || []).slice(0, 60).map(r => ({
         id:            r.transaction_id,
         new_bene:      r.is_beneficiary_new,
         is_fraud:      r.is_fraud_actual,
@@ -907,7 +839,7 @@ function RealWorldValidation({
 - Fraud detected by ML model: ${validation.fraud_detected} (${fraudPct}%)
 - Model accuracy: ${validation.accuracy != null ? (validation.accuracy * 100).toFixed(1) + '%' : 'N/A'}
 
-Actual CSV transaction rows (ALL ${allRows.length} rows):
+Sample transaction rows (${allRows.length} rows):
 ${JSON.stringify(allRows, null, 2)}
 
 Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What patterns explain this? Estimate your own fraud count based on the data.`
@@ -917,7 +849,7 @@ Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What pat
       setAiInsight(res)
     } catch (err) {
       console.error('AI Insight error:', err)
-      setAiInsight({ error: true })
+      setAiInsight(buildFallbackInsight(err.message))
     } finally {
       setInsightLoading(false)
     }
@@ -1062,15 +994,13 @@ Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What pat
             transition={{ delay: 0.7, duration: 0.4 }}
             className="mt-8"
           >
-            <Card className="bg-slate-900 border-slate-800 text-white relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-violet-500 to-indigo-500 opacity-70" />
-              <CardContent className="pt-6">
+            <Card className="insight-panel">
+              <CardContent>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-semibold flex items-center gap-2 text-cyan-400">
-                      <Sparkles size={20} /> AI Insight
+                      <Sparkles size={20} /> Dataset Insight
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1">What is in your dataset? Why are there so many or few fraud cases?</p>
                   </div>
                   <Button
                     onClick={handleAiInsight}
@@ -1079,7 +1009,7 @@ Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What pat
                     className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
                   >
                     {insightLoading ? <RefreshCw className="animate-spin mr-2" size={16} /> : <Sparkles className="mr-2" size={16} />}
-                    Generate AI Insight
+                    Analyze Upload
                   </Button>
                 </div>
 
@@ -1090,6 +1020,12 @@ Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What pat
                     className="mt-6 pt-5 border-t border-slate-800/60 space-y-5"
                   >
                     {/* Dataset summary */}
+                    {aiInsight.fallback && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+                        Live LLM insight is unavailable, so this panel is showing a metrics-based summary.
+                      </div>
+                    )}
+
                     {aiInsight.dataset_summary && (
                       <div className="relative bg-gradient-to-br from-slate-800/70 to-slate-900/70 p-5 rounded-2xl text-slate-200 leading-relaxed text-sm border border-slate-700/50 shadow-lg backdrop-blur-sm">
                         <div className="text-[11px] font-bold text-cyan-400/80 uppercase tracking-[0.2em] mb-3 flex items-center gap-2"><Brain size={14} /> What's in this dataset</div>
@@ -1138,15 +1074,9 @@ Analyze: What is in this dataset? Why is there ${fraudPct}% fraud rate? What pat
                     {/* Fused verdict sentence */}
                     {aiInsight.fused_verdict && (
                       <div className="relative bg-gradient-to-r from-cyan-900/30 via-slate-800/50 to-indigo-900/30 border-l-4 border-l-cyan-500 border-y border-r border-slate-700/50 p-5 rounded-r-2xl text-cyan-100 text-sm italic leading-relaxed shadow-lg backdrop-blur-sm">
-                        “{aiInsight.fused_verdict}”
+                        "{aiInsight.fused_verdict}"
                       </div>
                     )}
-                  </motion.div>
-                )}
-
-                {aiInsight?.error && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-amber-400 text-sm flex items-center gap-2">
-                    <AlertTriangle size={16} /> Could not generate insight at this time.
                   </motion.div>
                 )}
               </CardContent>
