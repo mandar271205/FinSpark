@@ -62,20 +62,6 @@ function FormSelectField({ label, register, name, help, error }) {
     <div className="field">
       <span className="field-label-row">
         {label}
-        {help && (
-          <TooltipProvider>
-            <ShadcnTooltip>
-              <TooltipTrigger asChild>
-                <span className="help-mark cursor-help text-slate-400 hover:text-cyan-400 transition-colors" aria-label={help}>
-                  <HelpCircle size={16} />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="bg-slate-900 border-slate-700 text-white font-medium">
-                {help}
-              </TooltipContent>
-            </ShadcnTooltip>
-          </TooltipProvider>
-        )}
       </span>
       <select {...register(name)} className={error ? 'border-red-500/50' : ''}>
         <option value={0}>No</option>
@@ -188,6 +174,21 @@ export function TransactionTesting({ form: initialForm, busy, runPrediction }) {
           {(busy || fusionLoading) ? <Spinner /> : <Shield size={18} />}
           {(busy || fusionLoading) ? 'Predicting…' : 'Predict Fraud (AI + ML)'}
         </motion.button>
+        
+        <div className="mt-6 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 text-sm text-slate-300">
+          <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+            <HelpCircle size={16} className="text-cyan-400" />
+            Field Information
+          </h4>
+          <ul className="space-y-2">
+            <li>
+              <strong className="text-slate-200">New Beneficiary:</strong> 1 means the receiver account is newly added. This is risky in phishing cash-outs.
+            </li>
+            <li>
+              <strong className="text-slate-200">Device Mismatch:</strong> 1 means device, browser, or IP differs from the usual customer profile.
+            </li>
+          </ul>
+        </div>
       </motion.form>
 
       {/* Clean single final answer card */}
