@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,11 +68,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     """Startup event to load ML models."""
     logger.info("Starting up FastAPI application...")
-    logger.info("Loading ML Models...")
+    logger.info("Loading ML Models in background...")
+    asyncio.create_task(load_models_background())
+
+
+async def load_models_background():
+    """Load model artifacts without blocking Railway from serving health checks."""
     try:
-        ml_service.load_models()
+        await asyncio.to_thread(ml_service.load_models)
     except Exception as e:
-        logger.error(f"Error loading ML models during startup: {e}")
+        logger.error(f"Error loading ML models in background: {e}")
 
 @app.get("/", tags=["Root"])
 async def root():
