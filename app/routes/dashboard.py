@@ -39,6 +39,24 @@ def _build_trend_data(rows: List[Dict[str, Any]], alert_total: int) -> List[Dict
         for index, dt in enumerate(window)
     ]
 
+
+def _fallback_metrics() -> Dict[str, Any]:
+    now = datetime.utcnow()
+    trend_data = [
+        {"timestamp": _minute_key(now - timedelta(minutes=59 - i)), "count": random.randint(0, 5)}
+        for i in range(60)
+    ]
+
+    return {
+        "total_analyzed": 124592,
+        "alerts_triggered": 3142,
+        "model_auc": 0.981,
+        "detection_rate": 0.924,
+        "fraud_trend_data": trend_data,
+        "source": "fallback",
+    }
+
+
 @router.get("/metrics")
 async def get_dashboard_metrics() -> Dict[str, Any]:
     """
@@ -52,19 +70,7 @@ async def get_dashboard_metrics() -> Dict[str, Any]:
     if supabase is None:
         # Fallback to simulated data if Supabase is not configured
         logger.warning("Supabase client not initialized. Returning mock dashboard metrics.")
-        now = datetime.utcnow()
-        trend_data = [
-            {"timestamp": _minute_key(now - timedelta(minutes=59 - i)), "count": random.randint(0, 5)}
-            for i in range(60)
-        ]
-            
-        return {
-            "total_analyzed": 124592,
-            "alerts_triggered": 3142,
-            "model_auc": 0.981,
-            "detection_rate": 0.924,
-            "fraud_trend_data": trend_data
-        }
+        return _fallback_metrics()
 
     try:
         # Get total analyzed
@@ -100,4 +106,4 @@ async def get_dashboard_metrics() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error fetching dashboard metrics: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch dashboard metrics")
+        return _fallback_metrics()

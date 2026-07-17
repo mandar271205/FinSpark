@@ -174,6 +174,47 @@ PREFERRED_COLUMNS = [
 ]
 
 
+def _model_threshold() -> float:
+    metadata = ml_service.metadata or {}
+    return float(metadata.get("optimal_threshold", 0.5))
+
+
+def _heuristic_prediction(features: Dict[str, float]) -> tuple[float, bool]:
+    numeric_vals = list(features.values())
+    if numeric_vals:
+        mean_val = float(np.mean(numeric_vals))
+        std_val = float(np.std(numeric_vals)) + 1e-6
+        norm = float(np.clip(mean_val / std_val, 0, 1))
+        signal_bonus = 0.0
+        if features.get("is_beneficiary_new", 0) >= 0.5:
+            signal_bonus += 0.18
+        if features.get("PSH Flag Cnt", 0) > 5 or features.get("RST Flag Cnt", 0) > 2:
+            signal_bonus += 0.16
+        if features.get("Fwd Pkts/s", 0) > 75 or features.get("Fwd Pkt Len Max", 0) > 1200:
+            signal_bonus += 0.16
+        risk_score = float(np.clip(norm * 0.45 + signal_bonus, 0.05, 0.98))
+    else:
+        risk_score = 0.15
+
+    return risk_score, bool(risk_score >= _model_threshold())
+
+
+def _parse_boolish_label(value: Any) -> Optional[bool]:
+    if pd.isna(value):
+        return None
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y", "fraud", "fraudulent"}:
+        return True
+    if text in {"false", "0", "no", "n", "normal", "legit", "legitimate"}:
+        return False
+    try:
+        return bool(int(float(text)))
+    except (TypeError, ValueError):
+        return None
+
+
 @router.post("/validate_real_fraud")
 async def validate_real_fraud(file: UploadFile = File(...)):
     """
@@ -225,11 +266,10 @@ async def validate_real_fraud(file: UploadFile = File(...)):
             tx_id = tx_id or f"Row_{index + 1}"
 
             # Identify ground truth label
-            is_actual_fraud = False
+            is_actual_fraud: Optional[bool] = None
             for label_col in ("is_fraud_actual", "is_fraud", "fraud", "label", "Label"):
                 if label_col in row and pd.notna(row[label_col]):
-                    val = row[label_col]
-                    is_actual_fraud = bool(int(float(val))) if str(val).replace('.','').isdigit() else str(val).strip().lower() in ("true", "1", "yes", "fraud")
+                    is_actual_fraud = _parse_boolish_label(row[label_col])
                     break
 
             # Build numeric features dict – skip non-numeric & metadata cols
@@ -246,20 +286,13 @@ async def validate_real_fraud(file: UploadFile = File(...)):
                     except (ValueError, TypeError):
                         pass
 
-            # Try real prediction; graceful fallback if features don't match scaler
+            # Try real prediction; graceful fallback if models are unavailable or
+            # the upload schema does not match the trained scaler.
             try:
                 risk_score, is_fraud_pred, _ = ml_service.predict(features)
-            except Exception:
-                # Fallback: use a simple heuristic if model can't process the features
-                import random as _rnd
-                numeric_vals = list(features.values())
-                if numeric_vals:
-                    norm = np.clip(np.mean(numeric_vals) / (np.std(numeric_vals) + 1e-6), 0, 1)
-                    risk_score = float(np.clip(norm * 0.5 + _rnd.uniform(0, 0.3), 0, 1))
-                else:
-                    risk_score = _rnd.uniform(0.1, 0.9)
-                threshold   = ml_service.metadata.get("optimal_threshold", 0.5)
-                is_fraud_pred = bool(risk_score >= threshold)
+            except Exception as pe:
+                logger.warning("Using heuristic validation fallback for %s: %s", tx_id, pe)
+                risk_score, is_fraud_pred = _heuristic_prediction(features)
 
             results.append({
                 "transaction_id":     tx_id,
